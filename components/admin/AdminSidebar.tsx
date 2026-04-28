@@ -15,6 +15,7 @@ import {
   DollarSign,
   Megaphone,
   ClipboardList,
+  Shield,
   X,
 } from "lucide-react"
 
@@ -29,6 +30,7 @@ const nav = [
   { href: "/admin/caja", label: "Cierre de Caja", icon: DollarSign },
   { href: "/admin/promociones", label: "Promociones", icon: Megaphone },
   { href: "/admin/auditoria", label: "Auditoría", icon: ClipboardList },
+  { href: "/admin/licencia", label: "Licencia", icon: Shield },
 ]
 
 interface Props {
