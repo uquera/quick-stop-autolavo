@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const file = formData.get("archivo") as File | null
     if (!file) return NextResponse.json({ error: "No se recibió archivo" }, { status: 400 })
 
-    const MAX_SIZE = 5 * 1024 * 1024 // 5 MB
+    const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
     if (file.size > MAX_SIZE) {
       return NextResponse.json({ error: "El archivo supera el límite de 5 MB" }, { status: 413 })
     }
