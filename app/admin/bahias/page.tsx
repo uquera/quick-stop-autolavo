@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { Plus, X, Warehouse, Pencil, Trash2, Car, Clock } from "lucide-react"
+import { Plus, X, Warehouse, Pencil, Trash2, Car, Clock, Power } from "lucide-react"
 
 type ServicioEnBahia = {
   id: string; estado: string; horaIngreso: string
@@ -81,6 +81,26 @@ export default function BahiasPage() {
     } finally { setLoading(false) }
   }
 
+  async function handleToggleActivo(id: string, activoActual: boolean) {
+    setBahias((prev) => prev.map((b) => b.id === id ? { ...b, activo: !activoActual } : b))
+    try {
+      const res = await fetch(`/api/bahias/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activo: !activoActual }),
+      })
+      if (!res.ok) {
+        setBahias((prev) => prev.map((b) => b.id === id ? { ...b, activo: activoActual } : b))
+        toast.error("Error actualizando bahía")
+      } else {
+        toast.success(!activoActual ? "Bahía activada" : "Bahía desactivada")
+      }
+    } catch {
+      setBahias((prev) => prev.map((b) => b.id === id ? { ...b, activo: activoActual } : b))
+      toast.error("Error de conexión")
+    }
+  }
+
   async function handleDelete(id: string, nombre: string) {
     if (!confirm(`¿Eliminar la ${nombre}? Solo es posible si no tiene servicios activos.`)) return
     try {
@@ -123,13 +143,26 @@ export default function BahiasPage() {
                     <Warehouse className="w-5 h-5" style={{ color: b.color }} />
                   </div>
                   <div>
-                    <p className="font-bold text-gray-800">{b.nombre}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-gray-800">{b.nombre}</p>
+                      {!b.activo && (
+                        <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-200 text-gray-500">
+                          Apagada
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs" style={{ color: b.color }}>
                       {sActivos.length} en curso · {sCompletados.length} completado(s)
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 items-center">
+                  <button
+                    onClick={() => handleToggleActivo(b.id, b.activo)}
+                    title={b.activo ? "Desactivar bahía" : "Activar bahía"}
+                    className={`p-1.5 rounded-lg transition-colors ${b.activo ? "text-emerald-600 hover:bg-emerald-50" : "text-gray-400 hover:bg-gray-100"}`}>
+                    <Power className="w-4 h-4" />
+                  </button>
                   <button onClick={() => setEditando({ ...b })} className="p-1.5 rounded-lg hover:bg-white/60 text-gray-600 transition-colors" title="Editar">
                     <Pencil className="w-4 h-4" />
                   </button>

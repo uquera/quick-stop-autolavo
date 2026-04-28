@@ -49,13 +49,19 @@ export default function ServicioTimer({ horaInicio, horaIngreso, duracionEstimad
   }
 
   const elapsedMin = elapsed / 60000
-  const sobrePasado = estado === "EN_PROCESO" && elapsedMin > duracionEstimada
+  const pct = estado === "EN_PROCESO" && duracionEstimada > 0
+    ? (elapsedMin / duracionEstimada) * 100
+    : 0
 
   const colorClass =
     estado === "EN_ESPERA"
       ? "text-amber-600 bg-amber-50"
-      : sobrePasado
+      : pct >= 100
       ? "text-red-600 bg-red-50 animate-pulse"
+      : pct >= 85
+      ? "text-orange-600 bg-orange-50"
+      : pct >= 50
+      ? "text-yellow-600 bg-yellow-50"
       : "text-emerald-600 bg-emerald-50"
 
   return (

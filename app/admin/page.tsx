@@ -2,16 +2,14 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { Car, Wrench, DollarSign, Users, Clock, TrendingUp } from "lucide-react"
 import RentabilidadPanel from "@/components/admin/RentabilidadPanel"
+import { getHoyRange } from "@/lib/timezone"
 
 function formatCOP(amount: number) {
   return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(amount)
 }
 
 export default async function AdminDashboard() {
-  const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
-  const finHoy = new Date()
-  finHoy.setHours(23, 59, 59, 999)
+  const { inicio: hoy, fin: finHoy } = getHoyRange()
 
   const [
     vehiculosHoy,

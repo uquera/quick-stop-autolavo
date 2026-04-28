@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { getHoyRange } from "@/lib/timezone"
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -12,8 +13,9 @@ export async function GET(req: NextRequest) {
   const desde = searchParams.get("desde")
   const hasta = searchParams.get("hasta")
 
-  const inicio = desde ? new Date(desde) : (() => { const d = new Date(); d.setHours(0,0,0,0); return d })()
-  const fin    = hasta ? new Date(hasta) : (() => { const d = new Date(); d.setHours(23,59,59,999); return d })()
+  const { inicio: inicioHoy, fin: finHoy } = getHoyRange()
+  const inicio = desde ? new Date(desde) : inicioHoy
+  const fin    = hasta ? new Date(hasta) : finHoy
 
   // Servicios completados: filtrar por horaSalida (igual que cierre de caja)
   // Así reportes y caja siempre cuadran en los mismos montos
@@ -58,9 +60,10 @@ export async function GET(req: NextRequest) {
   }
 
   // Vehículos por hora de ingreso
+  const tz = process.env.NEXT_PUBLIC_TIMEZONE ?? "America/Bogota"
   const porHora: Record<number, number> = {}
   for (const s of ingresados) {
-    const h = new Date(s.horaIngreso).getHours()
+    const h = parseInt(new Date(s.horaIngreso).toLocaleString("en-US", { timeZone: tz, hour: "2-digit", hour12: false }))
     porHora[h] = (porHora[h] ?? 0) + 1
   }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { getHoyRange, getMesRange, formatFechaEnTZ } from "@/lib/timezone"
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -14,13 +15,12 @@ export async function GET(req: NextRequest) {
   const ahora = new Date()
   let inicio: Date
   if (periodo === "hoy") {
-    inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0, 0, 0)
+    inicio = getHoyRange().inicio
   } else if (periodo === "30d") {
     inicio = new Date(ahora.getTime() - 30 * 86_400_000)
   } else if (periodo === "mes") {
-    inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1)
+    inicio = getMesRange().inicio
   } else {
-    // 7d por defecto
     inicio = new Date(ahora.getTime() - 7 * 86_400_000)
   }
 
@@ -106,8 +106,7 @@ export async function GET(req: NextRequest) {
   // ── Evolución diaria de ingresos ──────────────────────────────────────────
   const porDia: Record<string, { fecha: string; ingresos: number; cantidad: number }> = {}
   for (const s of servicios) {
-    const d   = new Date(s.horaSalida!)
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+    const key = formatFechaEnTZ(s.horaSalida!)
     if (!porDia[key]) porDia[key] = { fecha: key, ingresos: 0, cantidad: 0 }
     porDia[key].ingresos += s.total ?? 0
     porDia[key].cantidad++

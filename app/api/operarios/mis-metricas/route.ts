@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { getHoyRange } from "@/lib/timezone"
 
 export async function GET() {
   const session = await auth()
@@ -13,9 +14,7 @@ export async function GET() {
   })
   if (!operario) return NextResponse.json({ error: "Operario no encontrado" }, { status: 404 })
 
-  const ahora = new Date()
-  const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0, 0, 0)
-  const finHoy    = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59, 999)
+  const { inicio: inicioHoy, fin: finHoy } = getHoyRange()
 
   const [serviciosHoy, totalHistorico, activos] = await Promise.all([
     prisma.servicio.findMany({

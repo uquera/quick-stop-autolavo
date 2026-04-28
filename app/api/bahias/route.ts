@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { getHoyRange } from "@/lib/timezone"
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -11,10 +12,7 @@ export async function GET(req: NextRequest) {
 
   try {
     if (conServicios) {
-      const hoy = new Date()
-      hoy.setHours(0, 0, 0, 0)
-      const finHoy = new Date()
-      finHoy.setHours(23, 59, 59, 999)
+      const { inicio: hoy, fin: finHoy } = getHoyRange()
 
       const bahias = await prisma.bahia.findMany({
         orderBy: { nombre: "asc" },

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { enviarEmailBienvenida, enviarEmailConfirmacion } from "@/lib/email"
+import { getHoyRange } from "@/lib/timezone"
 
 const include = {
   vehiculo: true,
@@ -31,10 +33,7 @@ export async function GET(req: NextRequest) {
 
     // ── Historial de hoy: COMPLETADO + CANCELADO ──────────────────────────
     if (historial) {
-      // Usar fecha local del servidor
-      const ahora = new Date()
-      const inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0, 0, 0)
-      const fin    = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59, 999)
+      const { inicio, fin } = getHoyRange()
 
       const servicios = await prisma.servicio.findMany({
         where: {
@@ -48,9 +47,7 @@ export async function GET(req: NextRequest) {
     }
 
     // ── Fallback: todos los de hoy (para reportes/caja) ───────────────────
-    const ahora = new Date()
-    const inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0, 0, 0)
-    const fin    = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59, 999)
+    const { inicio, fin } = getHoyRange()
 
     const servicios = await prisma.servicio.findMany({
       where: { horaIngreso: { gte: inicio, lte: fin } },
@@ -106,6 +103,33 @@ export async function POST(req: Request) {
       },
       include,
     })
+    // ── Correos transaccionales (fire & forget) ───────────────────────────
+    const vehiculo = servicio.vehiculo
+    if (vehiculo?.clienteEmail) {
+      const nombresServicios = servicio.items.map((i) => i.nombre)
+      const bahiaNombre = servicio.bahia?.nombre ?? "Por asignar"
+      const operarioNombre = servicio.operario?.user?.name ?? "Por asignar"
+
+      const totalServicios = await prisma.servicio.count({ where: { vehiculoId } })
+      if (totalServicios === 1) {
+        enviarEmailBienvenida({
+          email: vehiculo.clienteEmail,
+          clienteNombre: vehiculo.clienteNombre ?? "",
+          placa: vehiculo.placa,
+        }).catch(() => {})
+      }
+
+      enviarEmailConfirmacion({
+        email: vehiculo.clienteEmail,
+        clienteNombre: vehiculo.clienteNombre ?? "",
+        placa: vehiculo.placa,
+        servicios: nombresServicios,
+        bahia: bahiaNombre,
+        operario: operarioNombre,
+        total: servicio.total ?? servicio.monto ?? 0,
+      }).catch(() => {})
+    }
+
     return NextResponse.json(servicio, { status: 201 })
   } catch (err) {
     console.error("[servicios POST]", err)

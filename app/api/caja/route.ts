@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { getHoyRange } from "@/lib/timezone"
 
-function inicioHoy() {
-  const d = new Date()
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0)
-}
-function finHoy() {
-  const d = new Date()
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
-}
+function inicioHoy() { return getHoyRange().inicio }
+function finHoy()    { return getHoyRange().fin }
 
 function calcularTotales(servicios: { metodoPago: string | null; total: number | null }[]) {
   const t = { EFECTIVO: 0, TRANSFERENCIA: 0, TARJETA: 0, total: 0, vehiculos: servicios.length }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { registrarCambio } from "@/lib/audit"
+import { enviarEmailServicioCompletado } from "@/lib/email"
 
 const include = {
   vehiculo: true,
@@ -58,7 +59,32 @@ export async function PATCH(
   if (bahiaId !== undefined)    data.bahiaId    = bahiaId || null
   if (observaciones !== undefined) data.observaciones = observaciones
 
-  const servicio = await prisma.servicio.update({ where: { id }, data, include })
+  const servicio = await prisma.servicio.update({
+    where: { id },
+    data,
+    include: {
+      ...include,
+      items: { include: { tipoServicio: true } },
+    },
+  })
+
+  // ── Correo de servicio completado (fire & forget) ─────────────────────────
+  if (estado === "COMPLETADO" && servicio.vehiculo?.clienteEmail) {
+    const v = servicio.vehiculo
+    const emailCliente = v.clienteEmail as string
+    const nombresServicios = (servicio as typeof servicio & { items?: { nombre: string }[] })
+      .items?.map((i) => i.nombre) ?? [servicio.tipoServicio?.nombre ?? "Servicio"]
+    enviarEmailServicioCompletado({
+      email: emailCliente,
+      clienteNombre: v.clienteNombre ?? "",
+      placa: v.placa,
+      servicios: nombresServicios,
+      duracionMinutos: servicio.duracionMinutos,
+      total: servicio.total ?? servicio.monto ?? 0,
+      metodoPago: servicio.metodoPago,
+    }).catch(() => {})
+  }
+
   return NextResponse.json(servicio)
 }
 
