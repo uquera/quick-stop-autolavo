@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { Search, Car, Clock, ChevronDown, ChevronUp, Pencil, X, Check } from "lucide-react"
+import { Search, Car, Clock, ChevronDown, ChevronUp, Pencil, X, Check, Download, Upload, FileSpreadsheet, Loader2 } from "lucide-react"
+import { useRef } from "react"
 
 type ServicioItem = { id: string; nombre: string; precio: number }
 type Servicio = {
@@ -44,6 +45,10 @@ export default function VehiculosPage() {
   const [editando, setEditando] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<Vehiculo>>({})
   const [guardando, setGuardando] = useState(false)
+  const [exportando, setExportando] = useState(false)
+  const [importando, setImportando] = useState(false)
+  const [showImport, setShowImport] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { cargarLista() }, [])
 
@@ -53,6 +58,39 @@ export default function VehiculosPage() {
       const data = await fetch("/api/vehiculos").then((r) => r.json())
       setVehiculos(data)
     } finally { setLoading(false) }
+  }
+
+  async function exportarExcel() {
+    setExportando(true)
+    try {
+      const res = await fetch("/api/vehiculos/exportar")
+      if (!res.ok) { toast.error("Error generando Excel"); return }
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement("a")
+      a.href     = url
+      a.download = `quickstop-clientes-${new Date().toLocaleDateString("es-CO").replace(/\//g, "-")}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success("Excel descargado correctamente")
+    } catch { toast.error("Error descargando") } finally { setExportando(false) }
+  }
+
+  async function importarExcel(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImportando(true)
+    try {
+      const fd = new FormData()
+      fd.append("archivo", file)
+      const res  = await fetch("/api/vehiculos/importar", { method: "POST", body: fd })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error ?? "Error importando"); return }
+      toast.success(data.mensaje)
+      setShowImport(false)
+      cargarLista()
+    } catch { toast.error("Error procesando el archivo") }
+    finally { setImportando(false); if (fileRef.current) fileRef.current.value = "" }
   }
 
   async function buscarPorPlaca() {
@@ -109,10 +147,91 @@ export default function VehiculosPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-gray-800">Historial de Vehículos</h1>
-        <p className="text-sm text-gray-500">Trazabilidad completa y edición de datos</p>
+      {/* Header con título y acciones */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-gray-800">Historial de Vehículos</h1>
+          <p className="text-sm text-gray-500">Trazabilidad completa · {vehiculos.length} vehículo(s) registrado(s)</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setShowImport(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 text-sm font-medium transition-colors">
+            <Upload className="w-4 h-4" /> Importar Excel
+          </button>
+          <button onClick={exportarExcel} disabled={exportando}
+            className="flex items-center gap-2 px-4 py-2 text-white text-sm font-medium rounded-lg disabled:opacity-60 transition-all"
+            style={{ background: "linear-gradient(135deg, #1E40AF, #38BDF8)" }}>
+            {exportando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            Exportar Excel
+          </button>
+        </div>
       </div>
+
+      {/* Modal importar */}
+      {showImport && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4"
+              style={{ background: "linear-gradient(135deg, #0F172A, #1E3A8A)" }}>
+              <div className="flex items-center gap-2 text-white">
+                <FileSpreadsheet className="w-5 h-5" />
+                <span className="font-semibold">Importar clientes desde Excel</span>
+              </div>
+              <button onClick={() => setShowImport(false)} className="text-white/60 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {/* Instrucciones */}
+              <div className="bg-blue-50 rounded-xl p-4 text-sm text-blue-800 space-y-1">
+                <p className="font-semibold flex items-center gap-1.5">
+                  <FileSpreadsheet className="w-4 h-4" /> Columnas reconocidas en el Excel:
+                </p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs mt-2 text-blue-700">
+                  {[
+                    ["Placa *", "requerida"],
+                    ["Marca *", "requerida"],
+                    ["Modelo", "opcional"],
+                    ["Año / Anio", "opcional"],
+                    ["Color", "opcional"],
+                    ["Tipo", "SEDAN, SUV, MOTO…"],
+                    ["Nombre Cliente", "opcional"],
+                    ["Teléfono", "opcional"],
+                    ["Email", "opcional"],
+                    ["Observaciones", "opcional"],
+                  ].map(([campo, desc]) => (
+                    <div key={campo}>
+                      <span className="font-semibold">{campo}</span>
+                      <span className="text-blue-500"> — {desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <p className="text-xs text-gray-500">
+                Si la placa ya existe, <strong>actualiza</strong> los datos del vehículo y cliente.
+                Si no existe, <strong>crea</strong> un nuevo registro.
+              </p>
+              {/* Botón para descargar plantilla */}
+              <button onClick={exportarExcel} disabled={exportando}
+                className="w-full flex items-center justify-center gap-2 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                <Download className="w-4 h-4" />
+                Descargar plantilla con datos actuales
+              </button>
+              {/* Upload */}
+              <div>
+                <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={importarExcel} className="hidden" />
+                <button onClick={() => fileRef.current?.click()} disabled={importando}
+                  className="w-full flex items-center justify-center gap-2 py-3 text-white font-semibold rounded-xl transition-all disabled:opacity-60"
+                  style={{ background: "linear-gradient(135deg, #059669, #10B981)" }}>
+                  {importando
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Procesando...</>
+                    : <><Upload className="w-4 h-4" /> Seleccionar archivo Excel</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Búsqueda */}
       <div className="flex gap-2">
