@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E40AF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fondo cuadrado redondeado -->
+  <rect width="32" height="32" rx="7" fill="url(#bg)"/>
+
+  <!-- Llave inglesa (wrench) centrada, blanca -->
+  <g transform="translate(16,16) rotate(-45) translate(-8,-8)">
+    <!-- Cuerpo de la llave -->
+    <path d="M11.5 2.5
+             C13.5 0.5 16.5 0 18.5 1.5
+             L15.5 4.5 L17 6 L20 3
+             C21.5 5 21 8 19 10
+             C17.5 11.5 15.5 12 14 11.5
+             L5.5 20 C4.5 21 3 21 2 20
+             C1 19 1 17.5 2 16.5
+             L10.5 8 C10 6.5 10.5 4 11.5 2.5 Z"
+          fill="white" opacity="0.95"/>
+    <!-- Tuerca circular en el extremo -->
+    <circle cx="3.5" cy="18.5" r="1.8" fill="#1E40AF"/>
+  </g>
+</svg>
