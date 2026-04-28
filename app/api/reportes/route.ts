@@ -15,13 +15,22 @@ export async function GET(req: NextRequest) {
   const inicio = desde ? new Date(desde) : (() => { const d = new Date(); d.setHours(0,0,0,0); return d })()
   const fin    = hasta ? new Date(hasta) : (() => { const d = new Date(); d.setHours(23,59,59,999); return d })()
 
-  const servicios = await prisma.servicio.findMany({
-    where: { horaIngreso: { gte: inicio, lte: fin } },
+  // Servicios completados: filtrar por horaSalida (igual que cierre de caja)
+  // Así reportes y caja siempre cuadran en los mismos montos
+  const completados = await prisma.servicio.findMany({
+    where: {
+      estado: "COMPLETADO",
+      horaSalida: { gte: inicio, lte: fin },
+    },
     include: { tipoServicio: true, vehiculo: true, bahia: true, items: true },
-    orderBy: { horaIngreso: "asc" },
+    orderBy: { horaSalida: "asc" },
   })
 
-  const completados = servicios.filter((s) => s.estado === "COMPLETADO")
+  // Para el flujo de vehículos por hora usamos horaIngreso (cuándo llegaron)
+  const ingresados = await prisma.servicio.findMany({
+    where: { horaIngreso: { gte: inicio, lte: fin } },
+    select: { horaIngreso: true },
+  })
 
   // Ingresos por método de pago
   const porMetodo: Record<string, number> = {}
@@ -30,7 +39,7 @@ export async function GET(req: NextRequest) {
     porMetodo[m] = (porMetodo[m] ?? 0) + (s.total ?? 0)
   }
 
-  // Servicios por tipo (usa items si existen, si no el tipoServicio principal)
+  // Servicios por tipo
   const porTipo: Record<string, { nombre: string; cantidad: number; ingresos: number; duracionPromedio: number }> = {}
   for (const s of completados) {
     const nombres: string[] = s.items?.length
@@ -48,20 +57,21 @@ export async function GET(req: NextRequest) {
     if (t.cantidad > 0) t.duracionPromedio = Math.round(t.duracionPromedio / t.cantidad)
   }
 
-  // Vehículos por hora
+  // Vehículos por hora de ingreso
   const porHora: Record<number, number> = {}
-  for (const s of servicios) {
+  for (const s of ingresados) {
     const h = new Date(s.horaIngreso).getHours()
     porHora[h] = (porHora[h] ?? 0) + 1
   }
 
   const totalIngresos = completados.reduce((a, s) => a + (s.total ?? 0), 0)
-  const duracionPromedio = completados.filter((s) => s.duracionMinutos).length > 0
-    ? Math.round(completados.reduce((a, s) => a + (s.duracionMinutos ?? 0), 0) / completados.filter((s) => s.duracionMinutos).length)
+  const conDuracion   = completados.filter((s) => s.duracionMinutos)
+  const duracionPromedio = conDuracion.length > 0
+    ? Math.round(conDuracion.reduce((a, s) => a + (s.duracionMinutos ?? 0), 0) / conDuracion.length)
     : 0
 
   return NextResponse.json({
-    totalVehiculos: servicios.length,
+    totalVehiculos:   ingresados.length,
     totalCompletados: completados.length,
     totalIngresos,
     duracionPromedio,

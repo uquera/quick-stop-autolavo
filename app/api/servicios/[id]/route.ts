@@ -51,11 +51,11 @@ export async function PATCH(
   }
 
   if (metodoPago !== undefined) data.metodoPago = metodoPago
-  if (monto !== undefined) data.monto = monto
-  if (descuento !== undefined) data.descuento = descuento
-  if (total !== undefined) data.total = total
-  if (operarioId !== undefined) data.operarioId = operarioId
-  if (bahiaId !== undefined) data.bahiaId = bahiaId
+  if (monto !== undefined)    data.monto     = isNaN(parseFloat(monto))    ? null : parseFloat(monto)
+  if (descuento !== undefined) data.descuento = isNaN(parseFloat(descuento)) ? 0   : Math.max(0, parseFloat(descuento))
+  if (total !== undefined)    data.total     = isNaN(parseFloat(total))    ? null : Math.max(0, parseFloat(total))
+  if (operarioId !== undefined) data.operarioId = operarioId || null
+  if (bahiaId !== undefined)    data.bahiaId    = bahiaId || null
   if (observaciones !== undefined) data.observaciones = observaciones
 
   const servicio = await prisma.servicio.update({ where: { id }, data, include })

@@ -30,15 +30,15 @@ export async function GET() {
   }
 
   try {
-    // Todos los cierres del día
+    // Todos los cierres del día — siempre en orden ASC para mostrar historial
     const cierresHoy = await prisma.cierreCaja.findMany({
       where: { createdAt: { gte: inicioHoy(), lte: finHoy() } },
       orderBy: { createdAt: "asc" },
       include: { operario: { include: { user: { select: { name: true } } } } },
     })
 
-    // Inicio del periodo actual = fin del último cierre o inicio del día
-    const ultimoCierre = cierresHoy.at(-1)
+    // Último cierre = el más reciente (último en orden ASC)
+    const ultimoCierre = cierresHoy.length > 0 ? cierresHoy[cierresHoy.length - 1] : null
     const periodoDesde = ultimoCierre ? ultimoCierre.periodoHasta : inicioHoy()
 
     // Servicios del periodo actual (desde último cierre hasta ahora)
@@ -88,12 +88,13 @@ export async function POST(req: Request) {
   const { nombre, notas } = body
 
   try {
+    // Mismo orden ASC — el último del array es el cierre más reciente
     const cierresHoy = await prisma.cierreCaja.findMany({
       where: { createdAt: { gte: inicioHoy(), lte: finHoy() } },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: "asc" },
     })
 
-    const ultimoCierre = cierresHoy[0]
+    const ultimoCierre = cierresHoy.length > 0 ? cierresHoy[cierresHoy.length - 1] : null
     const periodoDesde = ultimoCierre ? ultimoCierre.periodoHasta : inicioHoy()
     const periodoHasta = new Date()
 

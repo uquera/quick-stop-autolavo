@@ -21,6 +21,11 @@ export async function POST(req: NextRequest) {
     const file = formData.get("archivo") as File | null
     if (!file) return NextResponse.json({ error: "No se recibió archivo" }, { status: 400 })
 
+    const MAX_SIZE = 5 * 1024 * 1024 // 5 MB
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json({ error: "El archivo supera el límite de 5 MB" }, { status: 413 })
+    }
+
     const ext = file.name.split(".").pop()?.toLowerCase()
     if (!["xlsx", "xls", "csv"].includes(ext ?? "")) {
       return NextResponse.json({ error: "Formato no soportado. Usa .xlsx, .xls o .csv" }, { status: 400 })
