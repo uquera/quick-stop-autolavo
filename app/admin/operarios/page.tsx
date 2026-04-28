@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { Plus, X, Pencil, Check } from "lucide-react"
+import { Plus, X, Pencil, Check, Trash2 } from "lucide-react"
 
 type Operario = { id: string; activo: boolean; createdAt: string; user: { name: string | null; email: string } }
 
@@ -77,6 +77,22 @@ export default function OperariosPage() {
     } finally { setGuardando(false) }
   }
 
+  async function eliminarOperario(id: string, nombre: string) {
+    if (!confirm(`¿Eliminar al operario "${nombre}"?\n\nSi tiene servicios registrados, será desactivado. Si no tiene historial, se eliminará permanentemente.`)) return
+    try {
+      const res = await fetch(`/api/operarios/${id}`, { method: "DELETE" })
+      if (!res.ok) { toast.error("Error eliminando operario"); return }
+      const data = await res.json()
+      if (data.desactivado) {
+        setOperarios((prev) => prev.map((op) => op.id === id ? { ...op, activo: false } : op))
+        toast.success(`${nombre} desactivado (tiene historial de servicios)`)
+      } else {
+        setOperarios((prev) => prev.filter((op) => op.id !== id))
+        toast.success(`${nombre} eliminado`)
+      }
+    } catch { toast.error("Error de conexión") }
+  }
+
   const senalContraseña = (p: string) =>
     p.length === 0 ? "" : p.length < 6 ? "text-red-500" : "text-emerald-600"
 
@@ -117,6 +133,9 @@ export default function OperariosPage() {
                 </span>
                 <button onClick={() => iniciarEdicion(op)} className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors" title="Editar">
                   <Pencil className="w-4 h-4" />
+                </button>
+                <button onClick={() => eliminarOperario(op.id, op.user.name ?? op.user.email)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors" title="Eliminar">
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>

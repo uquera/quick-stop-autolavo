@@ -38,3 +38,31 @@ export async function PATCH(
 
   return NextResponse.json(updated)
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth()
+  if (!session || session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+  }
+
+  const { id } = await params
+
+  const operario = await prisma.operario.findUnique({
+    where: { id },
+    include: { _count: { select: { servicios: true } } },
+  })
+  if (!operario) return NextResponse.json({ error: "No encontrado" }, { status: 404 })
+
+  if (operario._count.servicios > 0) {
+    // Tiene historial — desactivar en lugar de borrar
+    await prisma.operario.update({ where: { id }, data: { activo: false } })
+    return NextResponse.json({ ok: true, desactivado: true })
+  }
+
+  // Sin historial — eliminar usuario y operario (cascade)
+  await prisma.user.delete({ where: { id: operario.userId } })
+  return NextResponse.json({ ok: true, eliminado: true })
+}
