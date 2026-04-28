@@ -1,0 +1,315 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ─── AUTENTICACIÓN ─────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          Role      @default(OPERARIO)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  operario Operario?
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  usado     Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("password_reset_tokens")
+}
+
+enum Role {
+  ADMIN
+  OPERARIO
+}
+
+// ─── OPERARIOS ────────────────────────────────────────────────────────────────
+
+model Operario {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  servicios Servicio[]
+  cierres   CierreCaja[]
+
+  @@map("operarios")
+}
+
+// ─── BAHÍAS ───────────────────────────────────────────────────────────────────
+
+model Bahia {
+  id     String  @id @default(cuid())
+  nombre String
+  color  String  @default("#3B82F6")
+  activo Boolean @default(true)
+
+  servicios Servicio[]
+
+  @@map("bahias")
+}
+
+// ─── TIPOS DE SERVICIO ────────────────────────────────────────────────────────
+
+model TipoServicio {
+  id              String  @id @default(cuid())
+  nombre          String
+  descripcion     String?
+  precio          Float
+  duracionMinutos Int     @default(30)
+  activo          Boolean @default(true)
+
+  servicios     Servicio[]
+  servicioItems ServicioItem[]
+
+  @@map("tipos_servicio")
+}
+
+// ─── VEHÍCULOS ────────────────────────────────────────────────────────────────
+
+model Vehiculo {
+  id              String       @id @default(cuid())
+  placa           String       @unique
+  marca           String
+  modelo          String?
+  anio            Int?
+  color           String?
+  tipo            TipoVehiculo @default(SEDAN)
+  clienteNombre   String?
+  clienteTelefono String?
+  clienteEmail    String?
+  observaciones   String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  servicios Servicio[]
+
+  @@map("vehiculos")
+}
+
+enum TipoVehiculo {
+  SEDAN
+  SUV
+  CAMIONETA
+  MOTO
+  BUS
+  OTRO
+}
+
+// ─── SERVICIOS (TURNOS DE LAVADO) ────────────────────────────────────────────
+
+model Servicio {
+  id             String         @id @default(cuid())
+  vehiculoId     String
+  operarioId     String?
+  bahiaId        String?
+  tipoServicioId String?
+
+  horaIngreso     DateTime       @default(now())
+  horaInicio      DateTime?
+  horaSalida      DateTime?
+  duracionMinutos Int?
+
+  estado        EstadoServicio @default(EN_ESPERA)
+  metodoPago    MetodoPago?
+  monto         Float?
+  descuento     Float?         @default(0)
+  total         Float?
+  observaciones String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vehiculo     Vehiculo      @relation(fields: [vehiculoId], references: [id])
+  operario     Operario?     @relation(fields: [operarioId], references: [id])
+  bahia        Bahia?        @relation(fields: [bahiaId], references: [id])
+  tipoServicio TipoServicio? @relation(fields: [tipoServicioId], references: [id])
+  items        ServicioItem[]
+
+  @@map("servicios")
+}
+
+model ServicioItem {
+  id             String  @id @default(cuid())
+  servicioId     String
+  tipoServicioId String
+  nombre         String
+  precio         Float
+
+  servicio     Servicio     @relation(fields: [servicioId], references: [id], onDelete: Cascade)
+  tipoServicio TipoServicio @relation(fields: [tipoServicioId], references: [id])
+
+  @@map("servicio_items")
+}
+
+enum EstadoServicio {
+  EN_ESPERA
+  EN_PROCESO
+  COMPLETADO
+  CANCELADO
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TRANSFERENCIA
+  TARJETA
+  NEQUI
+  DAVIPLATA
+}
+
+// ─── PROMOCIONES ──────────────────────────────────────────────────────────────
+
+model Promocion {
+  id            String        @id @default(cuid())
+  nombre        String
+  descripcion   String?
+  tipoDescuento TipoDescuento @default(PORCENTAJE)
+  valor         Float
+  fechaInicio   DateTime
+  fechaFin      DateTime
+  activa        Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+
+  @@map("promociones")
+}
+
+enum TipoDescuento {
+  PORCENTAJE
+  VALOR_FIJO
+}
+
+// ─── CIERRE DE CAJA ───────────────────────────────────────────────────────────
+
+model CierreCaja {
+  id                 String   @id @default(cuid())
+  nombre             String   @default("Turno")
+  periodoDesde       DateTime
+  periodoHasta       DateTime
+  operarioId         String?
+  totalEfectivo      Float    @default(0)
+  totalTransferencia Float    @default(0)
+  totalTarjeta       Float    @default(0)
+  totalIngresos      Float    @default(0)
+  totalVehiculos     Int      @default(0)
+  totalServicios     Int      @default(0)
+  notas              String?
+  createdAt          DateTime @default(now())
+
+  operario Operario? @relation(fields: [operarioId], references: [id])
+
+  @@map("cierres_caja")
+}
+
+// ─── AUDITORÍA ────────────────────────────────────────────────────────────────
+
+model AuditEntry {
+  id           String   @id @default(cuid())
+  entidadTipo  String
+  entidadId    String
+  campo        String
+  valorAntes   String?
+  valorDespues String?
+  userId       String
+  userName     String
+  createdAt    DateTime @default(now())
+
+  @@index([entidadId])
+  @@map("audit_entries")
+}
+
+// ─── LICENCIA / GOBERNANZA ───────────────────────────────────────────────────
+
+model Licencia {
+  id               String       @id @default("singleton")
+  plan             PlanLicencia @default(PRO)
+  fechaVencimiento DateTime
+  suspendida       Boolean      @default(false)
+  notasAdmin       String?
+  updatedAt        DateTime     @updatedAt
+
+  pagos PagoLicencia[]
+
+  @@map("licencia")
+}
+
+enum PlanLicencia {
+  BASICO
+  PRO
+  ENTERPRISE
+}
+
+model PagoLicencia {
+  id            String   @id @default(cuid())
+  licenciaId    String
+  monto         Float
+  moneda        String   @default("COP")
+  periodoInicio DateTime
+  periodoFin    DateTime
+  fechaPago     DateTime @default(now())
+  notas         String?
+
+  licencia Licencia @relation(fields: [licenciaId], references: [id])
+
+  @@map("pagos_licencia")
+}

@@ -1,0 +1,17 @@
+export const BRAND = {
+  name:        process.env.NEXT_PUBLIC_BRAND_NAME        ?? "QuickStop Multiservicio",
+  initials:    process.env.NEXT_PUBLIC_BRAND_INITIALS    ?? "QS",
+  specialty:   process.env.NEXT_PUBLIC_BRAND_SPECIALTY   ?? "Auto Lavado",
+  tagline:     process.env.NEXT_PUBLIC_BRAND_TAGLINE     ?? "Limpieza · Rapidez · Calidad",
+  color:       process.env.NEXT_PUBLIC_BRAND_COLOR       ?? "#1E40AF",
+  colorDark:   process.env.NEXT_PUBLIC_BRAND_COLOR_DARK  ?? "#1e3a8a",
+  colorLight:  process.env.NEXT_PUBLIC_BRAND_COLOR_LIGHT ?? "#EFF6FF",
+  colorAccent: process.env.NEXT_PUBLIC_BRAND_COLOR_ACCENT ?? "#38BDF8",
+  whatsapp:    process.env.NEXT_PUBLIC_BRAND_WHATSAPP    ?? "57XXXXXXXXX",
+  siteUrl:     process.env.NEXT_PUBLIC_APP_URL           ?? "http://localhost:3010",
+  city:        process.env.NEXT_PUBLIC_BRAND_CITY        ?? "Colombia",
+  address:     process.env.NEXT_PUBLIC_BRAND_ADDRESS     ?? "",
+  email:       process.env.NEXT_PUBLIC_BRAND_EMAIL       ?? "",
+  seoTitle:    process.env.NEXT_PUBLIC_BRAND_SEO_TITLE   ?? "QuickStop Multiservicio | Auto Lavado",
+  seoDescription: process.env.NEXT_PUBLIC_BRAND_SEO_DESCRIPTION ?? "Servicio de auto lavado profesional.",
+} as const
