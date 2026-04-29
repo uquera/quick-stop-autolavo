@@ -69,7 +69,7 @@ export default function VehiculosPage() {
       const url  = URL.createObjectURL(blob)
       const a    = document.createElement("a")
       a.href     = url
-      a.download = `quickstop-clientes-${new Date().toLocaleDateString("es-CO").replace(/\//g, "-")}.xlsx`
+      a.download = `quickstop-clientes-${new Date().toLocaleDateString("es-AR").replace(/\//g, "-")}.xlsx`
       a.click()
       URL.revokeObjectURL(url)
       toast.success("Excel descargado correctamente")
@@ -363,7 +363,7 @@ export default function VehiculosPage() {
                               </p>
                               <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5 flex-wrap">
                                 <Clock className="w-3 h-3 flex-shrink-0" />
-                                {new Date(s.horaIngreso).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}
+                                {new Date(s.horaIngreso).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
                                 {s.duracionMinutos && ` · ${s.duracionMinutos}min`}
                                 {s.operario?.user.name && ` · ${s.operario.user.name}`}
                                 {s.bahia?.nombre && ` · ${s.bahia.nombre}`}
@@ -371,7 +371,7 @@ export default function VehiculosPage() {
                               </p>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
-                              {s.total != null && <p className="text-sm font-bold text-gray-800">${s.total.toLocaleString("es-CO")}</p>}
+                              {s.total != null && <p className="text-sm font-bold text-gray-800">${s.total.toLocaleString("es-AR")}</p>}
                               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ESTADO_COLOR[s.estado] ?? "bg-gray-100 text-gray-500"}`}>
                                 {s.estado.replace("_", " ")}
                               </span>

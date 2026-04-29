@@ -56,6 +56,14 @@ export async function GET() {
       vehiculos:     cierresHoy.reduce((a, c) => a + c.totalVehiculos, 0)     + totalesPeriodo.vehiculos,
     }
 
+    // Pagos a operarios del día
+    const pagosOperarios = await prisma.pagoOperario.findMany({
+      where: { fecha: { gte: inicioHoy(), lte: finHoy() } },
+      include: { operario: { include: { user: { select: { name: true } } } } },
+      orderBy: { fecha: "desc" },
+    })
+    const totalPagos = pagosOperarios.reduce((a, p) => a + p.monto, 0)
+
     return NextResponse.json({
       cierresHoy,
       periodoActual: {
@@ -65,6 +73,9 @@ export async function GET() {
         turnoNumero: cierresHoy.length + 1,
       },
       totalDia,
+      pagosOperarios,
+      totalPagos,
+      gananciaNeta: totalDia.total - totalPagos,
       tienePeriodoAbierto: serviciosPeriodo.length > 0 || cierresHoy.length === 0,
     })
   } catch (err) {

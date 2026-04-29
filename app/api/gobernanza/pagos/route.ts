@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     data: {
       licenciaId: licencia.id,
       monto: parseFloat(monto),
-      moneda: moneda ?? "COP",
+      moneda: moneda ?? "ARS",
       periodoInicio: new Date(periodoInicio),
       periodoFin: new Date(periodoFin),
       notas: notas ?? null,

@@ -9,7 +9,7 @@ export const BRAND = {
   colorAccent: process.env.NEXT_PUBLIC_BRAND_COLOR_ACCENT ?? "#38BDF8",
   whatsapp:    process.env.NEXT_PUBLIC_BRAND_WHATSAPP    ?? "57XXXXXXXXX",
   siteUrl:     process.env.NEXT_PUBLIC_APP_URL           ?? "http://localhost:3010",
-  city:        process.env.NEXT_PUBLIC_BRAND_CITY        ?? "Colombia",
+  city:        process.env.NEXT_PUBLIC_BRAND_CITY        ?? "Córdoba, Argentina",
   address:     process.env.NEXT_PUBLIC_BRAND_ADDRESS     ?? "",
   email:       process.env.NEXT_PUBLIC_BRAND_EMAIL       ?? "",
   seoTitle:    process.env.NEXT_PUBLIC_BRAND_SEO_TITLE   ?? "QuickStop Multiservicio | Auto Lavado",

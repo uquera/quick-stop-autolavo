@@ -7,7 +7,9 @@ import { getHoyRange } from "@/lib/timezone"
 const include = {
   vehiculo: true,
   operario: { include: { user: { select: { name: true } } } },
-  bahia: true,
+  opExterior: { include: { user: { select: { name: true } } } },
+  opSecado:   { include: { user: { select: { name: true } } } },
+  opInterior: { include: { user: { select: { name: true } } } },
   tipoServicio: true,
   items: { include: { tipoServicio: true } },
 }
@@ -17,24 +19,21 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
   const { searchParams } = new URL(req.url)
-  const activos  = searchParams.get("activos") === "true"
+  const activos   = searchParams.get("activos")   === "true"
   const historial = searchParams.get("historial") === "true"
 
   try {
-    // ── Activos: EN_ESPERA + EN_PROCESO, sin filtro de fecha ──────────────
     if (activos) {
       const servicios = await prisma.servicio.findMany({
-        where: { estado: { in: ["EN_ESPERA", "EN_PROCESO"] } },
+        where: { estado: { in: ["EN_ESPERA", "EN_PROCESO", "POR_COBRAR"] } },
         include,
         orderBy: { horaIngreso: "asc" },
       })
       return NextResponse.json(servicios)
     }
 
-    // ── Historial de hoy: COMPLETADO + CANCELADO ──────────────────────────
     if (historial) {
       const { inicio, fin } = getHoyRange()
-
       const servicios = await prisma.servicio.findMany({
         where: {
           estado: { in: ["COMPLETADO", "CANCELADO"] },
@@ -46,9 +45,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(servicios)
     }
 
-    // ── Fallback: todos los de hoy (para reportes/caja) ───────────────────
     const { inicio, fin } = getHoyRange()
-
     const servicios = await prisma.servicio.findMany({
       where: { horaIngreso: { gte: inicio, lte: fin } },
       include,
@@ -67,7 +64,7 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
   const body = await req.json()
-  const { vehiculoId, tiposServicioIds, bahiaId, operarioId, observaciones } = body
+  const { vehiculoId, tiposServicioIds, operarioId, observaciones } = body
 
   if (!vehiculoId || !tiposServicioIds?.length) {
     return NextResponse.json({ error: "Vehículo y al menos un tipo de servicio requeridos" }, { status: 400 })
@@ -81,18 +78,15 @@ export async function POST(req: Request) {
 
     const totalMonto = tipos.reduce((sum, t) => sum + t.precio, 0)
 
-    const ahora = new Date()
     const servicio = await prisma.servicio.create({
       data: {
         vehiculoId,
         tipoServicioId: tipos[0].id,
-        bahiaId: bahiaId || null,
         operarioId: operarioId || null,
         monto: totalMonto,
         total: totalMonto,
         observaciones,
-        estado: "EN_PROCESO",
-        horaInicio: ahora,
+        estado: "EN_ESPERA",
         items: {
           create: tipos.map((t) => ({
             tipoServicioId: t.id,
@@ -103,14 +97,14 @@ export async function POST(req: Request) {
       },
       include,
     })
-    // ── Correos transaccionales (fire & forget) ───────────────────────────
+
+    // Correos transaccionales (fire & forget)
     const vehiculo = servicio.vehiculo
     if (vehiculo?.clienteEmail) {
       const nombresServicios = servicio.items.map((i) => i.nombre)
-      const bahiaNombre = servicio.bahia?.nombre ?? "Por asignar"
       const operarioNombre = servicio.operario?.user?.name ?? "Por asignar"
-
       const totalServicios = await prisma.servicio.count({ where: { vehiculoId } })
+
       if (totalServicios === 1) {
         enviarEmailBienvenida({
           email: vehiculo.clienteEmail,
@@ -124,7 +118,7 @@ export async function POST(req: Request) {
         clienteNombre: vehiculo.clienteNombre ?? "",
         placa: vehiculo.placa,
         servicios: nombresServicios,
-        bahia: bahiaNombre,
+        bahia: "Línea única",
         operario: operarioNombre,
         total: servicio.total ?? servicio.monto ?? 0,
       }).catch(() => {})

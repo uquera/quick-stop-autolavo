@@ -1,4 +1,4 @@
-const TZ = process.env.NEXT_PUBLIC_TIMEZONE ?? "America/Bogota"
+const TZ = process.env.NEXT_PUBLIC_TIMEZONE ?? "America/Argentina/Cordoba"
 
 function getUTCOffsetMs(date: Date, tz: string): number {
   const fmt = new Intl.DateTimeFormat("en-US", {

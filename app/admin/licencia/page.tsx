@@ -5,26 +5,26 @@ import { prisma } from "@/lib/prisma"
 import { BRAND } from "@/lib/brand"
 import { Shield, CheckCircle, AlertTriangle, XCircle, CalendarDays, Tag, Receipt } from "lucide-react"
 
-function formatCOP(monto: number, moneda: string) {
-  const currency = moneda === "COP" ? "COP" : moneda
-  return new Intl.NumberFormat("es-CO", {
+function formatARS(monto: number, moneda: string) {
+  const currency = moneda === "ARS" ? "ARS" : moneda
+  return new Intl.NumberFormat("es-AR", {
     style: "currency", currency, minimumFractionDigits: 0,
   }).format(monto)
 }
 
 function formatFecha(d: Date) {
-  return d.toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+  return d.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
 }
 
 function formatPeriodo(inicio: Date, fin: Date) {
   if (inicio.getUTCMonth() === fin.getUTCMonth() && inicio.getUTCFullYear() === fin.getUTCFullYear()) {
-    const label = inicio.toLocaleDateString("es-CO", { month: "long", year: "numeric", timeZone: "UTC" })
+    const label = inicio.toLocaleDateString("es-AR", { month: "long", year: "numeric", timeZone: "UTC" })
     return label.charAt(0).toUpperCase() + label.slice(1)
   }
   return (
-    inicio.toLocaleDateString("es-CO", { day: "numeric", month: "short", timeZone: "UTC" }) +
+    inicio.toLocaleDateString("es-AR", { day: "numeric", month: "short", timeZone: "UTC" }) +
     " – " +
-    fin.toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
+    fin.toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
   )
 }
 
@@ -153,7 +153,7 @@ export default async function LicenciaPage() {
                   <p className="text-xs text-gray-400 mt-0.5">{formatFecha(p.fechaPago)}</p>
                   {p.notas && <p className="text-xs text-gray-400 mt-0.5">{p.notas}</p>}
                 </div>
-                <span className="text-sm font-bold text-gray-700">{formatCOP(p.monto, p.moneda)}</span>
+                <span className="text-sm font-bold text-gray-700">{formatARS(p.monto, p.moneda)}</span>
               </div>
             ))}
           </div>

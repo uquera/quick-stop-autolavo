@@ -143,7 +143,7 @@ export async function enviarEmailConfirmacion(opts: {
               <p style="margin:0 0 6px;font-size:14px;color:#374151;"><strong>Bahía:</strong> ${opts.bahia}</p>
               <p style="margin:0 0 6px;font-size:14px;color:#374151;"><strong>Operario:</strong> ${opts.operario}</p>
               <p style="margin:0;font-size:14px;color:#374151;"><strong>Total estimado:</strong>
-                <span style="color:#1E40AF;font-weight:700;">$${opts.total.toLocaleString("es-CO")} COP</span>
+                <span style="color:#1E40AF;font-weight:700;">$${opts.total.toLocaleString("es-AR")} (ARS)</span>
               </p>
             </td>
           </tr>
@@ -208,7 +208,7 @@ export async function enviarEmailServicioCompletado(opts: {
               <ul style="margin:0 0 12px;padding-left:20px;">${serviciosHtml}</ul>
               <p style="margin:0 0 6px;font-size:14px;color:#374151;"><strong>Duración:</strong> ${duracionTexto}</p>
               <p style="margin:0 0 6px;font-size:14px;color:#374151;"><strong>Método de pago:</strong> ${metodoPagoTexto}</p>
-              <p style="margin:0;font-size:16px;color:#065f46;font-weight:700;"><strong>Total cobrado:</strong> $${opts.total.toLocaleString("es-CO")} COP</p>
+              <p style="margin:0;font-size:16px;color:#065f46;font-weight:700;"><strong>Total cobrado:</strong> $${opts.total.toLocaleString("es-AR")} (ARS)</p>
             </td>
           </tr>
         </table>

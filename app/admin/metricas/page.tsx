@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from "react"
 import { BarChart3, TrendingUp, DollarSign, Clock, Zap, Award, Loader2 } from "lucide-react"
 
-function formatCOP(n: number) {
-  return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n)
+function formatARS(n: number) {
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 }).format(n)
 }
 
 type BahiaMetrica = {
@@ -111,9 +111,9 @@ export default function MetricasPage() {
           {/* KPIs resumen */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: "Ingresos totales",   value: formatCOP(data.resumen.totalIngresos),     icon: DollarSign, color: "#1E40AF", bg: "#EFF6FF" },
+              { label: "Ingresos totales",   value: formatARS(data.resumen.totalIngresos),     icon: DollarSign, color: "#1E40AF", bg: "#EFF6FF" },
               { label: "Servicios completados", value: data.resumen.totalServicios,              icon: TrendingUp, color: "#059669", bg: "#ECFDF5" },
-              { label: "Ticket promedio",    value: formatCOP(data.resumen.ticketPromedio),     icon: Award,      color: "#7C3AED", bg: "#F5F3FF" },
+              { label: "Ticket promedio",    value: formatARS(data.resumen.ticketPromedio),     icon: Award,      color: "#7C3AED", bg: "#F5F3FF" },
               { label: "Tiempo promedio",    value: `${data.resumen.duracionPromedio} min`,     icon: Clock,      color: "#D97706", bg: "#FFFBEB" },
             ].map(({ label, value, icon: Icon, color, bg }) => (
               <div key={label} className="bg-white rounded-xl border border-gray-200 p-4">
@@ -135,13 +135,13 @@ export default function MetricasPage() {
               <div className="flex items-end gap-1.5 h-32">
                 {data.evolucion.map((d) => {
                   const pct = maxEvolucion > 0 ? Math.round((d.ingresos / maxEvolucion) * 100) : 0
-                  const fecha = new Date(d.fecha + "T12:00:00").toLocaleDateString("es-CO", { day: "2-digit", month: "short" })
+                  const fecha = new Date(d.fecha + "T12:00:00").toLocaleDateString("es-AR", { day: "2-digit", month: "short" })
                   return (
                     <div key={d.fecha} className="flex-1 flex flex-col items-center gap-1 group">
                       <div className="text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                        {formatCOP(d.ingresos)}
+                        {formatARS(d.ingresos)}
                       </div>
-                      <div title={`${fecha}: ${formatCOP(d.ingresos)}`}
+                      <div title={`${fecha}: ${formatARS(d.ingresos)}`}
                         className="w-full rounded-t cursor-pointer transition-all"
                         style={{
                           height: `${Math.max(pct, 4)}%`,
@@ -177,7 +177,7 @@ export default function MetricasPage() {
                           <span className="text-sm font-semibold text-gray-800">{b.nombre}</span>
                         </div>
                         <div className="text-right">
-                          <span className="text-sm font-bold text-gray-800">{formatCOP(b.ingresos)}</span>
+                          <span className="text-sm font-bold text-gray-800">{formatARS(b.ingresos)}</span>
                           <span className="text-xs text-gray-400 ml-2">{b.cantidad} serv.</span>
                         </div>
                       </div>
@@ -185,7 +185,7 @@ export default function MetricasPage() {
                       <div className="flex justify-between mt-1 text-xs text-gray-400">
                         <span>Prom. {b.duracionPromedio}min / servicio</span>
                         <span className="font-medium" style={{ color: b.ingresoPorMinuto > 500 ? "#059669" : "#6B7280" }}>
-                          {formatCOP(b.ingresoPorMinuto)}/min
+                          {formatARS(b.ingresoPorMinuto)}/min
                         </span>
                       </div>
                     </div>
@@ -215,7 +215,7 @@ export default function MetricasPage() {
                           <span className="text-sm font-semibold text-gray-800">{op.nombre}</span>
                         </div>
                         <div className="text-right">
-                          <span className="text-sm font-bold text-gray-800">{formatCOP(op.ingresos)}</span>
+                          <span className="text-sm font-bold text-gray-800">{formatARS(op.ingresos)}</span>
                           <span className="text-xs text-gray-400 ml-2">{op.cantidad} serv.</span>
                         </div>
                       </div>
@@ -250,14 +250,14 @@ export default function MetricasPage() {
                         <span className="text-sm font-semibold text-gray-800 truncate">{s.nombre}</span>
                         <div className="flex items-center gap-3 flex-shrink-0 ml-2">
                           <span className="text-xs text-gray-400">{s.cantidad} veces · {s.duracionPromedio}min prom.</span>
-                          <span className="text-sm font-bold text-gray-800">{formatCOP(s.ingresos)}</span>
+                          <span className="text-sm font-bold text-gray-800">{formatARS(s.ingresos)}</span>
                         </div>
                       </div>
                       <BarraHorizontal valor={s.ingresos} max={maxIngresosServicio} color="#7C3AED" />
                       <div className="flex justify-between mt-0.5">
                         <span className="text-xs text-gray-400">Total facturado</span>
                         <span className="text-xs font-medium" style={{ color: s.margenPorMinuto > 500 ? "#059669" : "#6B7280" }}>
-                          {formatCOP(s.margenPorMinuto)}/min trabajado
+                          {formatARS(s.margenPorMinuto)}/min trabajado
                         </span>
                       </div>
                     </div>
@@ -276,17 +276,17 @@ export default function MetricasPage() {
                 <div className="bg-white/10 rounded-xl p-3">
                   <p className="text-[#38BDF8] text-xs font-semibold uppercase tracking-wide mb-1">Bahía más productiva</p>
                   <p className="font-bold">{data.porBahia[0].nombre}</p>
-                  <p className="text-white/70 text-xs">{formatCOP(data.porBahia[0].ingresos)} · {data.porBahia[0].cantidad} servicios</p>
+                  <p className="text-white/70 text-xs">{formatARS(data.porBahia[0].ingresos)} · {data.porBahia[0].cantidad} servicios</p>
                 </div>
                 <div className="bg-white/10 rounded-xl p-3">
                   <p className="text-[#38BDF8] text-xs font-semibold uppercase tracking-wide mb-1">Operario estrella</p>
                   <p className="font-bold">{data.porOperario[0].nombre}</p>
-                  <p className="text-white/70 text-xs">{data.porOperario[0].velocidad} serv/hora · {formatCOP(data.porOperario[0].ingresos)}</p>
+                  <p className="text-white/70 text-xs">{data.porOperario[0].velocidad} serv/hora · {formatARS(data.porOperario[0].ingresos)}</p>
                 </div>
                 <div className="bg-white/10 rounded-xl p-3">
                   <p className="text-[#38BDF8] text-xs font-semibold uppercase tracking-wide mb-1">Servicio más rentable</p>
                   <p className="font-bold truncate">{data.porServicio[0].nombre}</p>
-                  <p className="text-white/70 text-xs">{formatCOP(data.porServicio[0].margenPorMinuto)}/min trabajado</p>
+                  <p className="text-white/70 text-xs">{formatARS(data.porServicio[0].margenPorMinuto)}/min trabajado</p>
                 </div>
               </div>
             </div>

@@ -42,21 +42,7 @@ async function main() {
     })
     operarioIds.push(operario.id)
   }
-  console.log("✅ Operarios creados")
-
-  // ── Bahías ────────────────────────────────────────────────────────────────
-  const bahiasData = [
-    { nombre: "Bahía 1", color: "#1E40AF" },
-    { nombre: "Bahía 2", color: "#0891B2" },
-    { nombre: "Bahía 3", color: "#059669" },
-    { nombre: "Bahía 4", color: "#7C3AED" },
-  ]
-  const bahiaIds: string[] = []
-  for (const b of bahiasData) {
-    const bahia = await prisma.bahia.create({ data: b })
-    bahiaIds.push(bahia.id)
-  }
-  console.log("✅ Bahías creadas")
+  console.log("✅ Operarios creados (Juan=Exterior, María=Secado, Carlos=Interior)")
 
   // ── Tipos de servicio ─────────────────────────────────────────────────────
   const tiposData = [
@@ -74,15 +60,92 @@ async function main() {
   }
   console.log("✅ Tipos de servicio creados")
 
+  // ── Materiales de bodega ──────────────────────────────────────────────────
+  const materialesData = [
+    { nombre: "Shampoo para autos",       unidad: "litros",   stockTotal: 20,  stockAlerta: 3  },
+    { nombre: "Cera líquida",             unidad: "litros",   stockTotal: 10,  stockAlerta: 2  },
+    { nombre: "Desengrasante",            unidad: "litros",   stockTotal: 15,  stockAlerta: 3  },
+    { nombre: "Limpiador de vidrios",     unidad: "litros",   stockTotal: 8,   stockAlerta: 2  },
+    { nombre: "Microfibra (paños)",       unidad: "unidades", stockTotal: 30,  stockAlerta: 5  },
+    { nombre: "Esponja de lavado",        unidad: "unidades", stockTotal: 20,  stockAlerta: 5  },
+    { nombre: "Ambientador interior",     unidad: "unidades", stockTotal: 50,  stockAlerta: 10 },
+    { nombre: "Protector de llantas",     unidad: "litros",   stockTotal: 5,   stockAlerta: 1  },
+    { nombre: "Limpiador de tapicería",   unidad: "litros",   stockTotal: 6,   stockAlerta: 1  },
+  ]
+  const materialIds: string[] = []
+  for (const m of materialesData) {
+    const mat = await prisma.material.create({ data: m })
+    materialIds.push(mat.id)
+    // Registrar entrada inicial de stock
+    await prisma.movimientoMaterial.create({
+      data: { materialId: mat.id, cantidad: m.stockTotal, tipo: "ENTRADA", nota: "Stock inicial (seed)" },
+    })
+  }
+  console.log("✅ Materiales de bodega creados")
+
+  // ── Asignar consumibles a tipos de servicio ────────────────────────────────
+  // Lavado Básico (idx 0): shampoo + esponja
+  await prisma.materialServicio.createMany({
+    data: [
+      { tipoServicioId: tipoIds[0], materialId: materialIds[0], cantidadPorServicio: 0.1 },  // shampoo 100ml
+      { tipoServicioId: tipoIds[0], materialId: materialIds[5], cantidadPorServicio: 1 },    // esponja
+    ],
+  })
+  // Lavado Completo (idx 1): shampoo + cera + microfibra + limpiador vidrios + ambientador
+  await prisma.materialServicio.createMany({
+    data: [
+      { tipoServicioId: tipoIds[1], materialId: materialIds[0], cantidadPorServicio: 0.15 }, // shampoo 150ml
+      { tipoServicioId: tipoIds[1], materialId: materialIds[1], cantidadPorServicio: 0.1  }, // cera 100ml
+      { tipoServicioId: tipoIds[1], materialId: materialIds[4], cantidadPorServicio: 2    }, // 2 microfibras
+      { tipoServicioId: tipoIds[1], materialId: materialIds[3], cantidadPorServicio: 0.1  }, // limpia vidrios
+      { tipoServicioId: tipoIds[1], materialId: materialIds[6], cantidadPorServicio: 1    }, // ambientador
+    ],
+  })
+  // Detailing Full (idx 2): todo
+  await prisma.materialServicio.createMany({
+    data: [
+      { tipoServicioId: tipoIds[2], materialId: materialIds[0], cantidadPorServicio: 0.2  }, // shampoo
+      { tipoServicioId: tipoIds[2], materialId: materialIds[1], cantidadPorServicio: 0.2  }, // cera
+      { tipoServicioId: tipoIds[2], materialId: materialIds[2], cantidadPorServicio: 0.15 }, // desengrasante
+      { tipoServicioId: tipoIds[2], materialId: materialIds[3], cantidadPorServicio: 0.2  }, // vidrios
+      { tipoServicioId: tipoIds[2], materialId: materialIds[4], cantidadPorServicio: 4    }, // microfibras
+      { tipoServicioId: tipoIds[2], materialId: materialIds[6], cantidadPorServicio: 1    }, // ambientador
+      { tipoServicioId: tipoIds[2], materialId: materialIds[7], cantidadPorServicio: 0.1  }, // llantas
+      { tipoServicioId: tipoIds[2], materialId: materialIds[8], cantidadPorServicio: 0.15 }, // tapicería
+    ],
+  })
+  // Lavado Motos (idx 3): shampoo + esponja
+  await prisma.materialServicio.createMany({
+    data: [
+      { tipoServicioId: tipoIds[3], materialId: materialIds[0], cantidadPorServicio: 0.05 },
+      { tipoServicioId: tipoIds[3], materialId: materialIds[5], cantidadPorServicio: 1    },
+    ],
+  })
+  // Lavado Chasis (idx 4): desengrasante + shampoo
+  await prisma.materialServicio.createMany({
+    data: [
+      { tipoServicioId: tipoIds[4], materialId: materialIds[2], cantidadPorServicio: 0.2  }, // desengrasante
+      { tipoServicioId: tipoIds[4], materialId: materialIds[0], cantidadPorServicio: 0.1  }, // shampoo
+    ],
+  })
+  // Lavado Tapicería (idx 5): limpiador tapicería + microfibras
+  await prisma.materialServicio.createMany({
+    data: [
+      { tipoServicioId: tipoIds[5], materialId: materialIds[8], cantidadPorServicio: 0.3  }, // limpiador tap.
+      { tipoServicioId: tipoIds[5], materialId: materialIds[4], cantidadPorServicio: 3    }, // microfibras
+    ],
+  })
+  console.log("✅ Consumibles asignados a tipos de servicio")
+
   // ── Vehículos de ejemplo ──────────────────────────────────────────────────
   const vehiculosData = [
-    { placa: "ABC123", marca: "Toyota",  modelo: "Corolla",   anio: 2020, color: "Blanco",  tipo: "SEDAN"    as const, clienteNombre: "Pedro García",    clienteTelefono: "3001234567" },
-    { placa: "DEF456", marca: "Mazda",   modelo: "CX-5",      anio: 2021, color: "Negro",   tipo: "SUV"      as const, clienteNombre: "Laura Martínez",   clienteTelefono: "3009876543" },
-    { placa: "GHI789", marca: "Renault", modelo: "Logan",     anio: 2019, color: "Rojo",    tipo: "SEDAN"    as const, clienteNombre: "Andrés López",     clienteTelefono: "3101112233" },
-    { placa: "JKL012", marca: "Yamaha",  modelo: "FZ 150",    anio: 2022, color: "Azul",    tipo: "MOTO"     as const, clienteNombre: "Sofía Herrera",    clienteTelefono: "3204455667" },
-    { placa: "MNO345", marca: "Ford",    modelo: "Explorer",  anio: 2018, color: "Gris",    tipo: "SUV"      as const, clienteNombre: "Roberto Díaz",     clienteTelefono: "3157788990" },
-    { placa: "PQR678", marca: "Chevrolet", modelo: "Spark",   anio: 2023, color: "Verde",   tipo: "SEDAN"    as const, clienteNombre: "Diana Torres",     clienteTelefono: "3112345678" },
-    { placa: "STU901", marca: "Ram",     modelo: "700",       anio: 2020, color: "Blanco",  tipo: "CAMIONETA"as const, clienteNombre: "Carlos Jiménez",   clienteTelefono: "3001122334" },
+    { placa: "ABC123", marca: "Toyota",    modelo: "Corolla",  anio: 2020, color: "Blanco",  tipo: "SEDAN"    as const, clienteNombre: "Pedro García",    clienteTelefono: "3001234567" },
+    { placa: "DEF456", marca: "Mazda",     modelo: "CX-5",     anio: 2021, color: "Negro",   tipo: "SUV"      as const, clienteNombre: "Laura Martínez",  clienteTelefono: "3009876543" },
+    { placa: "GHI789", marca: "Renault",   modelo: "Logan",    anio: 2019, color: "Rojo",    tipo: "SEDAN"    as const, clienteNombre: "Andrés López",    clienteTelefono: "3101112233" },
+    { placa: "JKL012", marca: "Yamaha",    modelo: "FZ 150",   anio: 2022, color: "Azul",    tipo: "MOTO"     as const, clienteNombre: "Sofía Herrera",   clienteTelefono: "3204455667" },
+    { placa: "MNO345", marca: "Ford",      modelo: "Explorer", anio: 2018, color: "Gris",    tipo: "SUV"      as const, clienteNombre: "Roberto Díaz",    clienteTelefono: "3157788990" },
+    { placa: "PQR678", marca: "Chevrolet", modelo: "Spark",    anio: 2023, color: "Verde",   tipo: "SEDAN"    as const, clienteNombre: "Diana Torres",    clienteTelefono: "3112345678" },
+    { placa: "STU901", marca: "Ram",       modelo: "700",      anio: 2020, color: "Blanco",  tipo: "CAMIONETA"as const, clienteNombre: "Carlos Jiménez", clienteTelefono: "3001122334" },
   ]
 
   const vehiculoIds: string[] = []
@@ -94,8 +157,9 @@ async function main() {
 
   // ── Servicios de ejemplo (últimos 3 días) ─────────────────────────────────
   const now = new Date()
-  const estados = ["COMPLETADO", "COMPLETADO", "COMPLETADO", "EN_PROCESO", "EN_ESPERA"] as const
-  const metodos = ["EFECTIVO", "TRANSFERENCIA", "TARJETA", "NEQUI", "EFECTIVO"] as const
+  const estados = ["COMPLETADO", "COMPLETADO", "COMPLETADO", "POR_COBRAR", "EN_PROCESO"] as ("COMPLETADO" | "POR_COBRAR" | "EN_PROCESO" | "EN_ESPERA" | "CANCELADO")[]
+  const etapas  = [null, null, null, null, "EXTERIOR"] as (null | "EXTERIOR" | "SECADO" | "INTERIOR")[]
+  const metodos = ["EFECTIVO", "TRANSFERENCIA", "TARJETA", "MERCADOPAGO", "EFECTIVO"] as const
 
   for (let dia = 0; dia < 3; dia++) {
     const fechaDia = new Date(now)
@@ -105,19 +169,20 @@ async function main() {
       const vh = vehiculoIds[i % vehiculoIds.length]
       const tipo = tipoIds[i % tipoIds.length]
       const operario = operarioIds[i % operarioIds.length]
-      const bahia = bahiaIds[i % bahiaIds.length]
       const tipoServicio = tiposData[i % tiposData.length]
 
       const horaIngreso = new Date(fechaDia)
       horaIngreso.setHours(8 + i, i * 5, 0, 0)
 
-      const horaInicio = dia === 0 && i >= 3 ? null : new Date(horaIngreso.getTime() + 5 * 60000)
-      const horaSalida = dia === 0 && i >= 3 ? null : (horaInicio ? new Date(horaInicio.getTime() + tipoServicio.duracionMinutos * 60000) : null)
+      const esActivo = dia === 0 && i >= 4
+      const horaInicio = esActivo ? (i === 4 ? new Date(horaIngreso.getTime() + 5 * 60000) : null) : new Date(horaIngreso.getTime() + 5 * 60000)
+      const horaSalida = esActivo ? null : (horaInicio ? new Date(horaInicio.getTime() + tipoServicio.duracionMinutos * 60000) : null)
       const duracion = horaInicio && horaSalida
         ? Math.round((horaSalida.getTime() - horaInicio.getTime()) / 60000)
         : null
 
       const estado = dia === 0 ? estados[i % estados.length] : "COMPLETADO"
+      const etapa  = dia === 0 ? etapas[i % etapas.length] : null
       const metodoPago = estado === "COMPLETADO" ? metodos[i % metodos.length] : null
 
       await prisma.servicio.create({
@@ -125,12 +190,15 @@ async function main() {
           vehiculoId: vh,
           tipoServicioId: tipo,
           operarioId: operario,
-          bahiaId: bahia,
+          opExteriorId: estado !== "EN_ESPERA" ? operarioIds[0] : null,
+          opSecadoId:   ["INTERIOR","POR_COBRAR","COMPLETADO"].includes(estado) ? operarioIds[1] : null,
+          opInteriorId: ["POR_COBRAR","COMPLETADO"].includes(estado) ? operarioIds[2] : null,
           horaIngreso,
           horaInicio,
           horaSalida,
           duracionMinutos: duracion,
           estado,
+          etapa,
           metodoPago,
           monto: tipoServicio.precio,
           total: tipoServicio.precio,
@@ -150,11 +218,12 @@ async function main() {
   })
 
   console.log("\n🚀 Seed completado!")
-  console.log("─────────────────────────────────")
+  console.log("─────────────────────────────────────────────────")
   console.log("Admin:    admin@quickstop.demo / quick2024")
-  console.log("Operario: juan@quickstop.demo  / demo1234")
-  console.log("Operario: maria@quickstop.demo / demo1234")
-  console.log("─────────────────────────────────")
+  console.log("Exterior: juan@quickstop.demo  / demo1234")
+  console.log("Secado:   maria@quickstop.demo / demo1234")
+  console.log("Interior: carlos@quickstop.demo / demo1234")
+  console.log("─────────────────────────────────────────────────")
 }
 
 main()

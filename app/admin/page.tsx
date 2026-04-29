@@ -4,8 +4,8 @@ import { Car, Wrench, DollarSign, Users, Clock, TrendingUp } from "lucide-react"
 import RentabilidadPanel from "@/components/admin/RentabilidadPanel"
 import { getHoyRange } from "@/lib/timezone"
 
-function formatCOP(amount: number) {
-  return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(amount)
+function formatARS(amount: number) {
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 }).format(amount)
 }
 
 export default async function AdminDashboard() {
@@ -17,11 +17,11 @@ export default async function AdminDashboard() {
     serviciosActivosHoy,
     ingresosHoy,
     serviciosMes,
-    bahiasActivas,
+    operariosActivos,
   ] = await Promise.all([
     prisma.servicio.count({ where: { horaIngreso: { gte: hoy, lte: finHoy } } }),
     prisma.servicio.count({ where: { estado: "COMPLETADO", horaSalida: { gte: hoy, lte: finHoy } } }),
-    prisma.servicio.count({ where: { estado: { in: ["EN_ESPERA", "EN_PROCESO"] } } }),
+    prisma.servicio.count({ where: { estado: { in: ["EN_ESPERA", "EN_PROCESO", "POR_COBRAR"] } } }),
     prisma.servicio.aggregate({
       _sum: { total: true },
       where: { estado: "COMPLETADO", horaSalida: { gte: hoy, lte: finHoy } },
@@ -36,7 +36,7 @@ export default async function AdminDashboard() {
       orderBy: { horaSalida: "desc" },
       take: 8,
     }),
-    prisma.bahia.count({ where: { activo: true } }),
+    prisma.operario.count({ where: { activo: true } }),
   ])
 
   const ingresosTotal    = ingresosHoy._sum.total ?? 0
@@ -49,8 +49,8 @@ export default async function AdminDashboard() {
     { label: "Vehículos hoy",     value: vehiculosHoy,                    icon: Car,        color: "#1E40AF", bg: "#EFF6FF" },
     { label: "Servicios activos", value: serviciosActivosHoy,             icon: Wrench,     color: "#D97706", bg: "#FFFBEB" },
     { label: "Completados hoy",   value: serviciosCompletadosHoy,         icon: TrendingUp, color: "#059669", bg: "#ECFDF5" },
-    { label: "Ingresos hoy",      value: formatCOP(ingresosTotal),        icon: DollarSign, color: "#7C3AED", bg: "#F5F3FF" },
-    { label: "Bahías activas",    value: bahiasActivas,                   icon: Users,      color: "#0891B2", bg: "#ECFEFF" },
+    { label: "Ingresos hoy",      value: formatARS(ingresosTotal),        icon: DollarSign, color: "#7C3AED", bg: "#F5F3FF" },
+    { label: "Operarios activos", value: operariosActivos,               icon: Users,      color: "#0891B2", bg: "#ECFEFF" },
     { label: "Tiempo promedio",   value: `${duracionPromedio}min`,        icon: Clock,      color: "#BE185D", bg: "#FDF2F8" },
   ]
 
@@ -60,7 +60,7 @@ export default async function AdminDashboard() {
       <div>
         <h1 className="text-xl font-bold text-gray-800">Panel</h1>
         <p className="text-sm text-gray-500 capitalize">
-          {new Date().toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          {new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
         </p>
       </div>
 
@@ -102,7 +102,7 @@ export default async function AdminDashboard() {
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="font-semibold text-sm text-gray-800">{formatCOP(s.total ?? 0)}</p>
+                    <p className="font-semibold text-sm text-gray-800">{formatARS(s.total ?? 0)}</p>
                     {s.duracionMinutos && <p className="text-xs text-gray-400">{s.duracionMinutos}min</p>}
                   </div>
                 </div>

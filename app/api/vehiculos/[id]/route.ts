@@ -19,7 +19,6 @@ export async function GET(
           items: { include: { tipoServicio: true } },
           tipoServicio: true,
           operario: { include: { user: { select: { name: true } } } },
-          bahia: true,
         },
         orderBy: { horaIngreso: "desc" },
       },

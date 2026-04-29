@@ -52,14 +52,14 @@ export default async function OperarioPromocionesPage() {
                   <div className="flex items-end justify-between">
                     <div>
                       <p className="text-3xl font-black text-blue-600">
-                        {p.tipoDescuento === "PORCENTAJE" ? `${p.valor}%` : `$${p.valor.toLocaleString("es-CO")}`}
+                        {p.tipoDescuento === "PORCENTAJE" ? `${p.valor}%` : `$${p.valor.toLocaleString("es-AR")}`}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">de descuento</p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-gray-400">Válido hasta</p>
                       <p className="text-xs font-semibold text-gray-600">
-                        {new Date(p.fechaFin).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}
+                        {new Date(p.fechaFin).toLocaleDateString("es-AR", { day: "numeric", month: "short" })}
                       </p>
                     </div>
                   </div>
@@ -79,7 +79,7 @@ export default async function OperarioPromocionesPage() {
                 <span className="text-sm font-medium text-gray-600">{p.nombre}</span>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-gray-500">
-                    {p.tipoDescuento === "PORCENTAJE" ? `${p.valor}%` : `$${p.valor.toLocaleString("es-CO")}`}
+                    {p.tipoDescuento === "PORCENTAJE" ? `${p.valor}%` : `$${p.valor.toLocaleString("es-AR")}`}
                   </span>
                   <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Vencida</span>
                 </div>

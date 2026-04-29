@@ -25,43 +25,22 @@ export async function GET(req: NextRequest) {
   }
 
   const servicios = await prisma.servicio.findMany({
-    where: {
-      estado: "COMPLETADO",
-      horaSalida: { gte: inicio },
-    },
+    where: { estado: "COMPLETADO", horaSalida: { gte: inicio } },
     include: {
-      bahia: true,
-      operario: { include: { user: { select: { name: true } } } },
+      operario:   { include: { user: { select: { name: true } } } },
+      opExterior: { include: { user: { select: { name: true } } } },
+      opSecado:   { include: { user: { select: { name: true } } } },
+      opInterior: { include: { user: { select: { name: true } } } },
       items: true,
       tipoServicio: true,
+      consumos: true,
     },
   })
-
-  // ── Rentabilidad por bahía ─────────────────────────────────────────────────
-  const porBahia: Record<string, {
-    nombre: string; color: string; cantidad: number; ingresos: number
-    duracionTotal: number; duracionPromedio: number; ingresoPorMinuto: number
-  }> = {}
-
-  for (const s of servicios) {
-    const key   = s.bahia?.id ?? "sin-bahia"
-    const label = s.bahia?.nombre ?? "Sin bahía"
-    const color = s.bahia?.color ?? "#6B7280"
-    if (!porBahia[key]) porBahia[key] = { nombre: label, color, cantidad: 0, ingresos: 0, duracionTotal: 0, duracionPromedio: 0, ingresoPorMinuto: 0 }
-    porBahia[key].cantidad++
-    porBahia[key].ingresos     += s.total ?? 0
-    porBahia[key].duracionTotal += s.duracionMinutos ?? 0
-  }
-
-  for (const b of Object.values(porBahia)) {
-    b.duracionPromedio  = b.cantidad > 0 ? Math.round(b.duracionTotal / b.cantidad) : 0
-    b.ingresoPorMinuto  = b.duracionTotal > 0 ? Math.round((b.ingresos / b.duracionTotal) * 100) / 100 : 0
-  }
 
   // ── Rentabilidad por operario ─────────────────────────────────────────────
   const porOperario: Record<string, {
     nombre: string; cantidad: number; ingresos: number
-    duracionPromedio: number; velocidad: number // servicios completados / hora trabajada
+    duracionPromedio: number; velocidad: number
   }> = {}
 
   for (const s of servicios) {
@@ -74,10 +53,23 @@ export async function GET(req: NextRequest) {
   }
 
   for (const op of Object.values(porOperario)) {
-    const totalMin         = op.duracionPromedio
-    op.duracionPromedio    = op.cantidad > 0 ? Math.round(totalMin / op.cantidad) : 0
-    // Velocidad: servicios por hora (60 / duracion promedio)
-    op.velocidad           = op.duracionPromedio > 0 ? Math.round((60 / op.duracionPromedio) * 10) / 10 : 0
+    const totalMin      = op.duracionPromedio
+    op.duracionPromedio = op.cantidad > 0 ? Math.round(totalMin / op.cantidad) : 0
+    op.velocidad        = op.duracionPromedio > 0 ? Math.round((60 / op.duracionPromedio) * 10) / 10 : 0
+  }
+
+  // ── Participación por etapa (exterior/secado/interior) ────────────────────
+  const porEtapaOp: Record<string, { nombre: string; exterior: number; secado: number; interior: number }> = {}
+  for (const s of servicios) {
+    const addEtapa = (opRef: typeof s.opExterior, etapa: "exterior" | "secado" | "interior") => {
+      if (!opRef) return
+      const k = opRef.user.name ?? "?"
+      if (!porEtapaOp[k]) porEtapaOp[k] = { nombre: k, exterior: 0, secado: 0, interior: 0 }
+      porEtapaOp[k][etapa]++
+    }
+    addEtapa(s.opExterior, "exterior")
+    addEtapa(s.opSecado,   "secado")
+    addEtapa(s.opInterior, "interior")
   }
 
   // ── Servicio más rentable ─────────────────────────────────────────────────
@@ -92,18 +84,28 @@ export async function GET(req: NextRequest) {
     for (const nombre of nombres) {
       if (!porServicio[nombre]) porServicio[nombre] = { nombre, cantidad: 0, ingresos: 0, duracionPromedio: 0, margenPorMinuto: 0 }
       porServicio[nombre].cantidad++
-      porServicio[nombre].ingresos     += (s.total ?? 0) / nombres.length
+      porServicio[nombre].ingresos += (s.total ?? 0) / nombres.length
       porServicio[nombre].duracionPromedio += s.duracionMinutos ?? 0
     }
   }
 
   for (const sv of Object.values(porServicio)) {
-    const totalMin          = sv.duracionPromedio
-    sv.duracionPromedio     = sv.cantidad > 0 ? Math.round(totalMin / sv.cantidad) : 0
-    sv.margenPorMinuto      = sv.duracionPromedio > 0 ? Math.round((sv.ingresos / totalMin) * 100) / 100 : 0
+    const totalMin       = sv.duracionPromedio
+    sv.duracionPromedio  = sv.cantidad > 0 ? Math.round(totalMin / sv.cantidad) : 0
+    sv.margenPorMinuto   = sv.duracionPromedio > 0 ? Math.round((sv.ingresos / totalMin) * 100) / 100 : 0
   }
 
-  // ── Evolución diaria de ingresos ──────────────────────────────────────────
+  // ── Consumo de materiales ─────────────────────────────────────────────────
+  const porMaterial: Record<string, { nombre: string; unidad: string; totalUsado: number }> = {}
+  for (const s of servicios) {
+    for (const c of s.consumos) {
+      const k = c.nombre
+      if (!porMaterial[k]) porMaterial[k] = { nombre: k, unidad: c.unidad, totalUsado: 0 }
+      porMaterial[k].totalUsado += c.cantidad
+    }
+  }
+
+  // ── Evolución diaria ──────────────────────────────────────────────────────
   const porDia: Record<string, { fecha: string; ingresos: number; cantidad: number }> = {}
   for (const s of servicios) {
     const key = formatFechaEnTZ(s.horaSalida!)
@@ -112,21 +114,22 @@ export async function GET(req: NextRequest) {
     porDia[key].cantidad++
   }
 
-  // ── Resumen general ───────────────────────────────────────────────────────
-  const totalIngresos   = servicios.reduce((a, s) => a + (s.total ?? 0), 0)
-  const totalServicios  = servicios.length
-  const conDuracion     = servicios.filter((s) => s.duracionMinutos)
+  // ── Resumen ───────────────────────────────────────────────────────────────
+  const totalIngresos    = servicios.reduce((a, s) => a + (s.total ?? 0), 0)
+  const totalServicios   = servicios.length
+  const conDuracion      = servicios.filter((s) => s.duracionMinutos)
   const duracionPromedio = conDuracion.length > 0
     ? Math.round(conDuracion.reduce((a, s) => a + (s.duracionMinutos ?? 0), 0) / conDuracion.length)
     : 0
-  const ticketPromedio  = totalServicios > 0 ? Math.round(totalIngresos / totalServicios) : 0
+  const ticketPromedio   = totalServicios > 0 ? Math.round(totalIngresos / totalServicios) : 0
 
   return NextResponse.json({
     periodo,
     resumen: { totalIngresos, totalServicios, duracionPromedio, ticketPromedio },
-    porBahia:     Object.values(porBahia).sort((a, b) => b.ingresos - a.ingresos),
     porOperario:  Object.values(porOperario).filter((o) => o.nombre !== "Sin asignar").sort((a, b) => b.ingresos - a.ingresos),
+    porEtapaOp:   Object.values(porEtapaOp).sort((a, b) => (b.exterior + b.secado + b.interior) - (a.exterior + a.secado + a.interior)),
     porServicio:  Object.values(porServicio).sort((a, b) => b.ingresos - a.ingresos),
+    porMaterial:  Object.values(porMaterial).sort((a, b) => b.totalUsado - a.totalUsado),
     evolucion:    Object.values(porDia).sort((a, b) => a.fecha.localeCompare(b.fecha)),
   })
 }

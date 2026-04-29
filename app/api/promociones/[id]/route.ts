@@ -87,9 +87,9 @@ export async function POST(
 
   const valorDescuento = promo.tipoDescuento === "PORCENTAJE"
     ? `${promo.valor}%`
-    : `$${promo.valor.toLocaleString("es-CO")} COP`
+    : `$${promo.valor.toLocaleString("es-AR")} (ARS)`
 
-  const vigencia = `${new Date(promo.fechaInicio).toLocaleDateString("es-CO")} al ${new Date(promo.fechaFin).toLocaleDateString("es-CO")}`
+  const vigencia = `${new Date(promo.fechaInicio).toLocaleDateString("es-AR")} al ${new Date(promo.fechaFin).toLocaleDateString("es-AR")}`
 
   try {
     const resultados = await enviarEmailPromocion({

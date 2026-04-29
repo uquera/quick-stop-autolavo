@@ -11,8 +11,8 @@ type Metricas = {
   activosAhora: number
 }
 
-function formatCOP(n: number) {
-  return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n)
+function formatARS(n: number) {
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 }).format(n)
 }
 
 export default function OperarioDashboard() {
@@ -26,7 +26,7 @@ export default function OperarioDashboard() {
       .finally(() => setLoading(false))
   }, [])
 
-  const hoy = new Date().toLocaleDateString("es-CO", {
+  const hoy = new Date().toLocaleDateString("es-AR", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   })
 
@@ -65,7 +65,7 @@ export default function OperarioDashboard() {
               },
               {
                 label: "Ingresos generados hoy",
-                value: formatCOP(metricas.ingresosHoy),
+                value: formatARS(metricas.ingresosHoy),
                 icon: DollarSign,
                 color: "#1E40AF",
                 bg: "#EFF6FF",
@@ -118,7 +118,7 @@ export default function OperarioDashboard() {
                 <p className="text-white/70 text-sm mt-0.5">
                   {metricas.completadosHoy === 0
                     ? "Ve a la cola de servicios para empezar a atender vehículos."
-                    : `Has completado ${metricas.completadosHoy} servicio(s) hoy generando ${formatCOP(metricas.ingresosHoy)}.`}
+                    : `Has completado ${metricas.completadosHoy} servicio(s) hoy generando ${formatARS(metricas.ingresosHoy)}.`}
                 </p>
               </div>
             </div>

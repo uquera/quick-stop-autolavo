@@ -14,13 +14,13 @@ type ReporteData = {
   porHora: Record<number, number>
 }
 
-function formatCOP(n: number) {
-  return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n)
+function formatARS(n: number) {
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 }).format(n)
 }
 
 const METODO_LABEL: Record<string, string> = {
   EFECTIVO: "Efectivo", TRANSFERENCIA: "Transferencia", TARJETA: "Tarjeta/Débito",
-  NEQUI: "Nequi", DAVIPLATA: "Daviplata", SIN_REGISTRAR: "Sin registrar",
+  MERCADOPAGO: "Mercado Pago", BILLETERA: "Billetera", SIN_REGISTRAR: "Sin registrar",
 }
 
 function hoy() { return new Date().toISOString().split("T")[0] }
@@ -164,7 +164,7 @@ export default function ReportesPage() {
             {[
               { label: "Vehículos atendidos", value: data.totalVehiculos, icon: Car, color: "#1E40AF", bg: "#EFF6FF" },
               { label: "Completados", value: data.totalCompletados, icon: TrendingUp, color: "#059669", bg: "#ECFDF5" },
-              { label: "Ingresos totales", value: formatCOP(data.totalIngresos), icon: DollarSign, color: "#7C3AED", bg: "#F5F3FF" },
+              { label: "Ingresos totales", value: formatARS(data.totalIngresos), icon: DollarSign, color: "#7C3AED", bg: "#F5F3FF" },
               { label: "Tiempo promedio", value: `${data.duracionPromedio}min`, icon: Clock, color: "#D97706", bg: "#FFFBEB" },
             ].map(({ label, value, icon: Icon, color, bg }) => (
               <div key={label} className="bg-white rounded-xl border border-gray-200 p-4">
@@ -195,7 +195,7 @@ export default function ReportesPage() {
                           <span className="text-gray-600">{METODO_LABEL[metodo] ?? metodo}</span>
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-gray-400">{pct}%</span>
-                            <span className="font-semibold text-gray-800">{formatCOP(total)}</span>
+                            <span className="font-semibold text-gray-800">{formatARS(total)}</span>
                           </div>
                         </div>
                         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -208,7 +208,7 @@ export default function ReportesPage() {
                   {/* Total */}
                   <div className="pt-2 border-t border-gray-100 flex justify-between font-bold text-gray-800">
                     <span>Total</span>
-                    <span className="text-blue-700">{formatCOP(data.totalIngresos)}</span>
+                    <span className="text-blue-700">{formatARS(data.totalIngresos)}</span>
                   </div>
                 </div>
               )}
@@ -238,7 +238,7 @@ export default function ReportesPage() {
                         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                           <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${pct}%` }} />
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">{formatCOP(t.ingresos)}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{formatARS(t.ingresos)}</p>
                       </div>
                     )
                   })}

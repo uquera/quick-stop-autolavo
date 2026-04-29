@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma"
 import { Tag, Clock } from "lucide-react"
 
-function formatCOP(n: number) {
-  return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n)
+function formatARS(n: number) {
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 }).format(n)
 }
 
 export default async function OperarioTiposServicioPage() {
@@ -32,8 +32,8 @@ export default async function OperarioTiposServicioPage() {
             </div>
             <div className="flex items-end justify-between">
               <div>
-                <p className="text-2xl font-black text-blue-600">{formatCOP(t.precio)}</p>
-                <p className="text-xs text-gray-400 mt-0.5">precio COP</p>
+                <p className="text-2xl font-black text-blue-600">{formatARS(t.precio)}</p>
+                <p className="text-xs text-gray-400 mt-0.5">precio ARS</p>
               </div>
               <div className="flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 rounded-lg">
                 <Clock className="w-3.5 h-3.5 text-gray-500" />

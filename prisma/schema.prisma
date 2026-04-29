@@ -92,22 +92,15 @@ model Operario {
 
   user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   servicios Servicio[]
-  cierres   CierreCaja[]
+
+  serviciosExterior Servicio[] @relation("ExtOp")
+  serviciosSecado   Servicio[] @relation("SecOp")
+  serviciosInterior Servicio[] @relation("IntOp")
+
+  cierres       CierreCaja[]
+  pagos         PagoOperario[]
 
   @@map("operarios")
-}
-
-// ─── BAHÍAS ───────────────────────────────────────────────────────────────────
-
-model Bahia {
-  id     String  @id @default(cuid())
-  nombre String
-  color  String  @default("#3B82F6")
-  activo Boolean @default(true)
-
-  servicios Servicio[]
-
-  @@map("bahias")
 }
 
 // ─── TIPOS DE SERVICIO ────────────────────────────────────────────────────────
@@ -120,8 +113,9 @@ model TipoServicio {
   duracionMinutos Int     @default(30)
   activo          Boolean @default(true)
 
-  servicios     Servicio[]
-  servicioItems ServicioItem[]
+  servicios       Servicio[]
+  servicioItems   ServicioItem[]
+  materiales      MaterialServicio[]
 
   @@map("tipos_servicio")
 }
@@ -157,14 +151,21 @@ enum TipoVehiculo {
   OTRO
 }
 
-// ─── SERVICIOS (TURNOS DE LAVADO) ────────────────────────────────────────────
+// ─── SERVICIOS (TURNOS DE LAVADO — LÍNEA ÚNICA) ───────────────────────────────
 
 model Servicio {
   id             String         @id @default(cuid())
   vehiculoId     String
   operarioId     String?
-  bahiaId        String?
   tipoServicioId String?
+
+  // Etapa en la línea de trabajo
+  etapa          EtapaLavado?
+
+  // Quién ejecutó cada etapa
+  opExteriorId   String?
+  opSecadoId     String?
+  opInteriorId   String?
 
   horaIngreso     DateTime       @default(now())
   horaInicio      DateTime?
@@ -183,9 +184,14 @@ model Servicio {
 
   vehiculo     Vehiculo      @relation(fields: [vehiculoId], references: [id])
   operario     Operario?     @relation(fields: [operarioId], references: [id])
-  bahia        Bahia?        @relation(fields: [bahiaId], references: [id])
   tipoServicio TipoServicio? @relation(fields: [tipoServicioId], references: [id])
   items        ServicioItem[]
+
+  opExterior Operario? @relation("ExtOp", fields: [opExteriorId], references: [id])
+  opSecado   Operario? @relation("SecOp", fields: [opSecadoId],   references: [id])
+  opInterior Operario? @relation("IntOp", fields: [opInteriorId], references: [id])
+
+  consumos ConsumibleUsado[]
 
   @@map("servicios")
 }
@@ -206,16 +212,101 @@ model ServicioItem {
 enum EstadoServicio {
   EN_ESPERA
   EN_PROCESO
+  POR_COBRAR
   COMPLETADO
   CANCELADO
+}
+
+enum EtapaLavado {
+  EXTERIOR
+  SECADO
+  INTERIOR
 }
 
 enum MetodoPago {
   EFECTIVO
   TRANSFERENCIA
   TARJETA
-  NEQUI
-  DAVIPLATA
+  MERCADOPAGO
+  BILLETERA
+}
+
+// ─── BODEGA / CONSUMIBLES ─────────────────────────────────────────────────────
+
+model Material {
+  id          String   @id @default(cuid())
+  nombre      String
+  unidad      String   @default("unidades")
+  stockTotal  Float    @default(0)
+  stockAlerta Float    @default(5)
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  configuraciones MaterialServicio[]
+  movimientos     MovimientoMaterial[]
+  consumos        ConsumibleUsado[]
+
+  @@map("materiales")
+}
+
+model MaterialServicio {
+  id                  String @id @default(cuid())
+  tipoServicioId      String
+  materialId          String
+  cantidadPorServicio Float  @default(1)
+
+  tipoServicio TipoServicio @relation(fields: [tipoServicioId], references: [id], onDelete: Cascade)
+  material     Material     @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@unique([tipoServicioId, materialId])
+  @@map("material_servicio")
+}
+
+model MovimientoMaterial {
+  id         String         @id @default(cuid())
+  materialId String
+  cantidad   Float
+  tipo       TipoMovimiento
+  nota       String?
+  createdAt  DateTime       @default(now())
+
+  material Material @relation(fields: [materialId], references: [id])
+
+  @@map("movimientos_material")
+}
+
+model ConsumibleUsado {
+  id         String @id @default(cuid())
+  servicioId String
+  materialId String
+  cantidad   Float
+  nombre     String
+  unidad     String
+
+  servicio Servicio @relation(fields: [servicioId], references: [id], onDelete: Cascade)
+  material Material @relation(fields: [materialId], references: [id])
+
+  @@map("consumibles_usados")
+}
+
+enum TipoMovimiento {
+  ENTRADA
+  SALIDA
+}
+
+// ─── PAGOS A OPERARIOS ────────────────────────────────────────────────────────
+
+model PagoOperario {
+  id         String   @id @default(cuid())
+  operarioId String
+  monto      Float
+  fecha      DateTime @default(now())
+  nota       String?
+  createdAt  DateTime @default(now())
+
+  operario Operario @relation(fields: [operarioId], references: [id])
+
+  @@map("pagos_operarios")
 }
 
 // ─── PROMOCIONES ──────────────────────────────────────────────────────────────

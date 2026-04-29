@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       estado: "COMPLETADO",
       horaSalida: { gte: inicio, lte: fin },
     },
-    include: { tipoServicio: true, vehiculo: true, bahia: true, items: true },
+    include: { tipoServicio: true, vehiculo: true, items: true, operario: { include: { user: { select: { name: true } } } } },
     orderBy: { horaSalida: "asc" },
   })
 

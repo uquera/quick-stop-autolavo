@@ -19,7 +19,7 @@ const hoy = new Date().toISOString().split("T")[0]
 function valorDisplay(p: Promocion) {
   return p.tipoDescuento === "PORCENTAJE"
     ? `${p.valor}%`
-    : `$${p.valor.toLocaleString("es-CO")}`
+    : `$${p.valor.toLocaleString("es-AR")}`
 }
 
 export default function PromocionesPage() {
@@ -239,7 +239,7 @@ export default function PromocionesPage() {
                       <div className="flex items-center gap-3 mt-1.5">
                         <span className="text-lg font-black text-blue-600">{valorDisplay(p)}</span>
                         <span className="text-xs text-gray-400">
-                          📅 {new Date(p.fechaInicio).toLocaleDateString("es-CO")} → {new Date(p.fechaFin).toLocaleDateString("es-CO")}
+                          📅 {new Date(p.fechaInicio).toLocaleDateString("es-AR")} → {new Date(p.fechaFin).toLocaleDateString("es-AR")}
                         </span>
                       </div>
                     </div>

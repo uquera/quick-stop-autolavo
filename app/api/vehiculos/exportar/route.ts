@@ -18,7 +18,6 @@ export async function GET() {
         include: {
           items: true,
           tipoServicio: true,
-          bahia: true,
           operario: { include: { user: { select: { name: true } } } },
         },
       },
@@ -42,11 +41,11 @@ export async function GET() {
       "Email":             v.clienteEmail ?? "",
       "Observaciones":     v.observaciones ?? "",
       "Total Servicios":   v.servicios.length,
-      "Total Gastado COP": totalGastado,
+      "Total Gastado ARS": totalGastado,
       "Último Servicio":   ultimoServicio
-        ? new Date(ultimoServicio.horaIngreso).toLocaleDateString("es-CO")
+        ? new Date(ultimoServicio.horaIngreso).toLocaleDateString("es-AR")
         : "",
-      "Fecha Registro":    new Date(v.createdAt).toLocaleDateString("es-CO"),
+      "Fecha Registro":    new Date(v.createdAt).toLocaleDateString("es-AR"),
     }
   })
 
@@ -64,13 +63,12 @@ export async function GET() {
         "Cliente":         v.clienteNombre ?? "",
         "Teléfono":        v.clienteTelefono ?? "",
         "Servicio(s)":     nombreServicio,
-        "Bahía":           s.bahia?.nombre ?? "",
         "Operario":        s.operario?.user.name ?? "",
-        "Fecha":           new Date(s.horaIngreso).toLocaleDateString("es-CO"),
-        "Hora Ingreso":    new Date(s.horaIngreso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }),
+        "Fecha":           new Date(s.horaIngreso).toLocaleDateString("es-AR"),
+        "Hora Ingreso":    new Date(s.horaIngreso).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }),
         "Duración (min)":  s.duracionMinutos ?? "",
         "Método Pago":     s.metodoPago ?? "",
-        "Total COP":       s.total ?? 0,
+        "Total ARS":       s.total ?? 0,
         "Estado":          s.estado,
       })
     }
@@ -95,7 +93,7 @@ export async function GET() {
   XLSX.utils.book_append_sheet(wb, sheetHistorial, "Historial de Servicios")
 
   const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" })
-  const fecha = new Date().toLocaleDateString("es-CO").replace(/\//g, "-")
+  const fecha = new Date().toLocaleDateString("es-AR").replace(/\//g, "-")
 
   return new NextResponse(buf, {
     status: 200,

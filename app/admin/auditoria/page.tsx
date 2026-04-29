@@ -40,7 +40,7 @@ export default async function AuditoriaPage() {
                   <p className="text-xs text-gray-400 mt-0.5">Por: {e.userName}</p>
                 </div>
                 <p className="text-xs text-gray-400 whitespace-nowrap">
-                  {new Date(e.createdAt).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  {new Date(e.createdAt).toLocaleString("es-AR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                 </p>
               </div>
             ))}

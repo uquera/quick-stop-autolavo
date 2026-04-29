@@ -14,24 +14,24 @@ const METODO_LABEL: Record<string, string> = {
   EFECTIVO: "Efectivo",
   TRANSFERENCIA: "Transferencia Bancaria",
   TARJETA: "Datafono / Tarjeta",
-  NEQUI: "Nequi",
-  DAVIPLATA: "Daviplata",
+  MERCADOPAGO: "Mercado Pago",
+  BILLETERA: "Billetera",
   SIN_REGISTRAR: "Sin registrar",
 }
 
-function formatCOP(n: number) {
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency", currency: "COP", minimumFractionDigits: 0,
+function formatARS(n: number) {
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency", currency: "ARS", minimumFractionDigits: 0,
   }).format(n)
 }
 
 function labelFecha(desde: string, hasta: string) {
   if (desde === hasta) {
     const d = new Date(desde + "T00:00:00")
-    return d.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+    return d.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
   }
-  const d1 = new Date(desde + "T00:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short" })
-  const d2 = new Date(hasta + "T00:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" })
+  const d1 = new Date(desde + "T00:00:00").toLocaleDateString("es-AR", { day: "numeric", month: "short" })
+  const d2 = new Date(hasta + "T00:00:00").toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })
   return `${d1} al ${d2}`
 }
 
@@ -93,7 +93,7 @@ export async function generarReportePDF(data: ReporteData, desde: string, hasta:
   // Fecha de generación (esquina derecha)
   doc.setFontSize(7)
   doc.setTextColor(...CIAN)
-  doc.text(`Generado: ${new Date().toLocaleString("es-CO")}`, W - 10, 38, { align: "right" })
+  doc.text(`Generado: ${new Date().toLocaleString("es-AR")}`, W - 10, 38, { align: "right" })
 
   let y = 52
 
@@ -101,7 +101,7 @@ export async function generarReportePDF(data: ReporteData, desde: string, hasta:
   const kpis = [
     { label: "Vehículos atendidos", value: String(data.totalVehiculos) },
     { label: "Servicios completados", value: String(data.totalCompletados) },
-    { label: "Ingresos totales", value: formatCOP(data.totalIngresos) },
+    { label: "Ingresos totales", value: formatARS(data.totalIngresos) },
     { label: "Tiempo promedio", value: `${data.duracionPromedio} min` },
   ]
 
@@ -163,7 +163,7 @@ export async function generarReportePDF(data: ReporteData, desde: string, hasta:
       }
 
       doc.setFont("helvetica", "bold")
-      doc.text(formatCOP(total), W - 12, y + 5.5, { align: "right" })
+      doc.text(formatARS(total), W - 12, y + 5.5, { align: "right" })
       doc.setFont("helvetica", "normal")
       doc.setTextColor(...GRIS)
       doc.setFontSize(7)
@@ -179,7 +179,7 @@ export async function generarReportePDF(data: ReporteData, desde: string, hasta:
     doc.setFontSize(10)
     doc.setFont("helvetica", "bold")
     doc.text("TOTAL", 14, y + 6)
-    doc.text(formatCOP(data.totalIngresos), W - 12, y + 6, { align: "right" })
+    doc.text(formatARS(data.totalIngresos), W - 12, y + 6, { align: "right" })
     y += 14
   }
 
@@ -217,7 +217,7 @@ export async function generarReportePDF(data: ReporteData, desde: string, hasta:
       doc.text(String(t.cantidad), 110, y + 5.5, { align: "center" })
       doc.text(`${t.duracionPromedio}min`, 135, y + 5.5, { align: "center" })
       doc.setFont("helvetica", "bold")
-      doc.text(formatCOP(t.ingresos), W - 12, y + 5.5, { align: "right" })
+      doc.text(formatARS(t.ingresos), W - 12, y + 5.5, { align: "right" })
 
       y += 8
     })

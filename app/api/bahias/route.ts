@@ -1,55 +1,10 @@
-import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/auth"
-import { prisma } from "@/lib/prisma"
-import { getHoyRange } from "@/lib/timezone"
+import { NextResponse } from "next/server"
 
-export async function GET(req: NextRequest) {
-  const session = await auth()
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-
-  const { searchParams } = new URL(req.url)
-  const conServicios = searchParams.get("conServicios") === "true"
-
-  try {
-    if (conServicios) {
-      const { inicio: hoy, fin: finHoy } = getHoyRange()
-
-      const bahias = await prisma.bahia.findMany({
-        orderBy: { nombre: "asc" },
-        include: {
-          servicios: {
-            where: { horaIngreso: { gte: hoy, lte: finHoy } },
-            include: {
-              vehiculo: true,
-              operario: { include: { user: { select: { name: true } } } },
-              items: { include: { tipoServicio: true } },
-              tipoServicio: true,
-            },
-            orderBy: { horaIngreso: "asc" },
-          },
-        },
-      })
-      return NextResponse.json(bahias)
-    }
-
-    const bahias = await prisma.bahia.findMany({ orderBy: { nombre: "asc" } })
-    return NextResponse.json(bahias)
-  } catch (err) {
-    console.error("[bahias GET]", err)
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
-  }
+// Bahías fue eliminado — la aplicación usa una línea única de lavado.
+export async function GET() {
+  return NextResponse.json([])
 }
 
-export async function POST(req: Request) {
-  const session = await auth()
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-  }
-
-  const body = await req.json()
-  const { nombre, color } = body
-  if (!nombre) return NextResponse.json({ error: "Nombre requerido" }, { status: 400 })
-
-  const bahia = await prisma.bahia.create({ data: { nombre, color: color || "#3B82F6" } })
-  return NextResponse.json(bahia, { status: 201 })
+export async function POST() {
+  return NextResponse.json({ error: "Módulo de Bahías no disponible" }, { status: 410 })
 }
