@@ -64,6 +64,30 @@ export async function GET() {
     })
     const totalPagos = pagosOperarios.reduce((a, p) => a + p.monto, 0)
 
+    // Costo de insumos del día (consumibles usados × costo unitario)
+    const consumosHoy = await prisma.consumibleUsado.findMany({
+      where: {
+        servicio: {
+          estado: "COMPLETADO",
+          horaSalida: { gte: inicioHoy(), lte: finHoy() },
+        },
+      },
+      include: { material: { select: { costoUnitario: true } } },
+    })
+    const costoInsumos = consumosHoy.reduce(
+      (a, c) => a + c.cantidad * (c.material.costoUnitario ?? 0),
+      0
+    )
+    // Detalle agrupado por material para mostrar en UI
+    const detalleInsumos: Record<string, { nombre: string; unidad: string; cantidadTotal: number; costoTotal: number }> = {}
+    for (const c of consumosHoy) {
+      if (!detalleInsumos[c.nombre]) {
+        detalleInsumos[c.nombre] = { nombre: c.nombre, unidad: c.unidad, cantidadTotal: 0, costoTotal: 0 }
+      }
+      detalleInsumos[c.nombre].cantidadTotal += c.cantidad
+      detalleInsumos[c.nombre].costoTotal    += c.cantidad * (c.material.costoUnitario ?? 0)
+    }
+
     return NextResponse.json({
       cierresHoy,
       periodoActual: {
@@ -75,7 +99,9 @@ export async function GET() {
       totalDia,
       pagosOperarios,
       totalPagos,
-      gananciaNeta: totalDia.total - totalPagos,
+      costoInsumos,
+      detalleInsumos: Object.values(detalleInsumos).sort((a, b) => b.costoTotal - a.costoTotal),
+      gananciaNeta: totalDia.total - totalPagos - costoInsumos,
       tienePeriodoAbierto: serviciosPeriodo.length > 0 || cierresHoy.length === 0,
     })
   } catch (err) {

@@ -34,12 +34,15 @@ type PagoOp = {
   operario: { user: { name: string | null } }
 }
 type Operario = { id: string; user: { name: string | null } }
+type DetalleInsumo = { nombre: string; unidad: string; cantidadTotal: number; costoTotal: number }
 type CajaData = {
   cierresHoy:       Cierre[]
   periodoActual:    PeriodoActual
   totalDia:         TotalDia
   pagosOperarios:   PagoOp[]
   totalPagos:       number
+  costoInsumos:     number
+  detalleInsumos:   DetalleInsumo[]
   gananciaNeta:     number
   tienePeriodoAbierto: boolean
 }
@@ -253,9 +256,10 @@ export default function CajaPage() {
   const td  = data?.totalDia
   const hoy = new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
 
-  const totalPagos   = data?.totalPagos   ?? 0
-  const gananciaNeta = data?.gananciaNeta ?? 0
-  const ingresosDia  = td?.total ?? 0
+  const totalPagos    = data?.totalPagos    ?? 0
+  const costoInsumos  = data?.costoInsumos  ?? 0
+  const gananciaNeta  = data?.gananciaNeta  ?? 0
+  const ingresosDia   = td?.total ?? 0
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -273,9 +277,30 @@ export default function CajaPage() {
           </div>
           <TarjetaMetodos efectivo={td.EFECTIVO} transferencia={td.TRANSFERENCIA} tarjeta={td.TARJETA} total={ingresosDia} />
 
-          {/* Pagos y resultado neto */}
+          {/* Gastos y resultado neto */}
           <div className="border-t-2 border-dashed border-gray-200">
+            {/* Insumos */}
             <div className="px-5 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TrendingDown className="w-4 h-4 text-orange-400" />
+                <span className="text-sm text-gray-700">Costo de insumos</span>
+                {costoInsumos === 0 && <span className="text-xs text-gray-400">(sin costo unitario configurado)</span>}
+              </div>
+              <span className="font-semibold text-orange-500">− {formatARS(costoInsumos)}</span>
+            </div>
+            {/* Detalle insumos colapsable */}
+            {(data?.detalleInsumos ?? []).filter(d => d.costoTotal > 0).length > 0 && (
+              <div className="px-5 pb-2 space-y-0.5">
+                {(data?.detalleInsumos ?? []).filter(d => d.costoTotal > 0).map(d => (
+                  <div key={d.nombre} className="flex justify-between text-xs text-gray-400 pl-6">
+                    <span>{d.nombre} ({d.cantidadTotal.toFixed(2)} {d.unidad})</span>
+                    <span>{formatARS(d.costoTotal)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Operarios */}
+            <div className="px-5 py-3 flex items-center justify-between border-t border-dashed border-gray-100">
               <div className="flex items-center gap-2">
                 <TrendingDown className="w-4 h-4 text-red-400" />
                 <span className="text-sm text-gray-700">Pagos a operarios</span>

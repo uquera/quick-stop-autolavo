@@ -13,6 +13,7 @@ type Material = {
   unidad: string
   stockTotal: number
   stockAlerta: number
+  costoUnitario: number
   activo: boolean
 }
 type Movimiento = {
@@ -34,10 +35,11 @@ export default function BodegaPage() {
   const [loading,      setLoading]      = useState(false)
 
   // Form estado
-  const [nombre,      setNombre]      = useState("")
-  const [unidad,      setUnidad]      = useState("unidades")
-  const [stockTotal,  setStockTotal]  = useState("")
-  const [stockAlerta, setStockAlerta] = useState("5")
+  const [nombre,        setNombre]        = useState("")
+  const [unidad,        setUnidad]        = useState("unidades")
+  const [stockTotal,    setStockTotal]    = useState("")
+  const [stockAlerta,   setStockAlerta]   = useState("5")
+  const [costoUnitario, setCostoUnitario] = useState("0")
 
   // Ajuste stock
   const [ajusteQty,   setAjusteQty]   = useState("")
@@ -66,12 +68,12 @@ export default function BodegaPage() {
       const res = await fetch("/api/materiales", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, unidad, stockTotal, stockAlerta }),
+        body: JSON.stringify({ nombre, unidad, stockTotal, stockAlerta, costoUnitario }),
       })
       if (!res.ok) { toast.error("Error creando material"); return }
       const nuevo = await res.json()
       setMateriales((prev) => [...prev, nuevo].sort((a, b) => a.nombre.localeCompare(b.nombre)))
-      setNombre(""); setUnidad("unidades"); setStockTotal(""); setStockAlerta("5")
+      setNombre(""); setUnidad("unidades"); setStockTotal(""); setStockAlerta("5"); setCostoUnitario("0")
       setShowForm(false)
       toast.success("Material creado")
     } finally { setLoading(false) }
@@ -88,7 +90,8 @@ export default function BodegaPage() {
         body: JSON.stringify({
           nombre: editando.nombre,
           unidad: editando.unidad,
-          stockAlerta: editando.stockAlerta,
+          stockAlerta:   editando.stockAlerta,
+          costoUnitario: editando.costoUnitario,
         }),
       })
       if (!res.ok) { toast.error("Error actualizando"); return }
@@ -201,7 +204,7 @@ export default function BodegaPage() {
                     style={{ width: `${Math.max(4, pct)}%` }}
                   />
                 </div>
-                <p className="text-xs text-gray-400 mt-1">Alerta en: {m.stockAlerta} {m.unidad}</p>
+                <p className="text-xs text-gray-400 mt-1">Alerta: {m.stockAlerta} {m.unidad} · Costo: ${m.costoUnitario.toLocaleString("es-CO")}/{m.unidad}</p>
               </div>
 
               <button
@@ -282,6 +285,12 @@ export default function BodegaPage() {
                 <input type="number" value={stockAlerta} onChange={(e) => setStockAlerta(e.target.value)} placeholder="5" min="0" step="0.01"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500" />
               </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Costo unitario ($)</label>
+                <input type="number" value={costoUnitario} onChange={(e) => setCostoUnitario(e.target.value)} placeholder="0" min="0" step="0.01"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500" />
+                <p className="text-xs text-gray-400 mt-1">Costo por {unidad || "unidad"} — usado para calcular gastos diarios</p>
+              </div>
               <div className="flex gap-2 pt-2">
                 <button type="button" onClick={() => setShowForm(false)}
                   className="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-600">Cancelar</button>
@@ -322,6 +331,13 @@ export default function BodegaPage() {
                     onChange={(e) => setEditando({ ...editando, stockAlerta: parseFloat(e.target.value) })} min="0" step="0.01"
                     className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500" />
                 </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Costo unitario ($)</label>
+                <input type="number" value={editando.costoUnitario}
+                  onChange={(e) => setEditando({ ...editando, costoUnitario: parseFloat(e.target.value) || 0 })} min="0" step="0.01"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500" />
+                <p className="text-xs text-gray-400 mt-1">Costo por {editando.unidad} — impacta el reporte diario</p>
               </div>
               <div className="flex gap-2 pt-2">
                 <button type="button" onClick={() => setEditando(null)}

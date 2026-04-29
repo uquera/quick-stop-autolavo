@@ -13,12 +13,13 @@ export async function PATCH(
 
   const { id } = await params
   const body = await req.json()
-  const { nombre, unidad, stockAlerta, ajusteStock, notaAjuste } = body
+  const { nombre, unidad, stockAlerta, costoUnitario, ajusteStock, notaAjuste } = body
 
   const data: Record<string, unknown> = {}
-  if (nombre !== undefined)     data.nombre      = nombre
-  if (unidad !== undefined)     data.unidad      = unidad
-  if (stockAlerta !== undefined) data.stockAlerta = parseFloat(stockAlerta)
+  if (nombre !== undefined)        data.nombre        = nombre
+  if (unidad !== undefined)        data.unidad        = unidad
+  if (stockAlerta !== undefined)   data.stockAlerta   = parseFloat(stockAlerta)
+  if (costoUnitario !== undefined) data.costoUnitario = parseFloat(costoUnitario) || 0
 
   if (ajusteStock !== undefined && ajusteStock !== 0) {
     const cant = parseFloat(ajusteStock)

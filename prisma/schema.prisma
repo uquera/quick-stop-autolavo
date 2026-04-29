@@ -234,13 +234,14 @@ enum MetodoPago {
 // ─── BODEGA / CONSUMIBLES ─────────────────────────────────────────────────────
 
 model Material {
-  id          String   @id @default(cuid())
-  nombre      String
-  unidad      String   @default("unidades")
-  stockTotal  Float    @default(0)
-  stockAlerta Float    @default(5)
-  activo      Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  id            String   @id @default(cuid())
+  nombre        String
+  unidad        String   @default("unidades")
+  stockTotal    Float    @default(0)
+  stockAlerta   Float    @default(5)
+  costoUnitario Float    @default(0)
+  activo        Boolean  @default(true)
+  createdAt     DateTime @default(now())
 
   configuraciones MaterialServicio[]
   movimientos     MovimientoMaterial[]

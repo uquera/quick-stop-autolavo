@@ -22,15 +22,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   }
 
-  const { nombre, unidad, stockTotal, stockAlerta } = await req.json()
+  const { nombre, unidad, stockTotal, stockAlerta, costoUnitario } = await req.json()
   if (!nombre) return NextResponse.json({ error: "Nombre requerido" }, { status: 400 })
 
   const material = await prisma.material.create({
     data: {
       nombre,
-      unidad: unidad || "unidades",
-      stockTotal: parseFloat(stockTotal) || 0,
-      stockAlerta: parseFloat(stockAlerta) || 5,
+      unidad:        unidad || "unidades",
+      stockTotal:    parseFloat(stockTotal)    || 0,
+      stockAlerta:   parseFloat(stockAlerta)   || 5,
+      costoUnitario: parseFloat(costoUnitario) || 0,
     },
   })
 
