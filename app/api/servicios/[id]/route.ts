@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { registrarCambio } from "@/lib/audit"
-import { enviarEmailServicioCompletado } from "@/lib/email"
+import { enviarEmailServicioIniciado, enviarEmailServicioCompletado } from "@/lib/email"
 
 const include = {
   vehiculo: true,
@@ -34,6 +34,7 @@ export async function PATCH(
   if (!actual) return NextResponse.json({ error: "Servicio no encontrado" }, { status: 404 })
 
   const data: Record<string, unknown> = {}
+  let enviarEmailAlIniciar = false
 
   // ── Avance de etapa en la línea de lavado ─────────────────────────────────
   if (siguiente) {
@@ -41,10 +42,12 @@ export async function PATCH(
 
     if (actual.estado === "EN_ESPERA") {
       // Iniciar → Lavado Exterior
-      data.estado    = "EN_PROCESO"
-      data.etapa     = "EXTERIOR"
+      data.estado     = "EN_PROCESO"
+      data.etapa      = "EXTERIOR"
       data.horaInicio = new Date()
       if (opId) data.opExteriorId = opId
+      // Correo "servicio iniciado" (fire & forget)
+      enviarEmailAlIniciar = true
 
     } else if (actual.etapa === "EXTERIOR") {
       // Exterior → Secado
@@ -122,19 +125,35 @@ export async function PATCH(
 
   const servicio = await prisma.servicio.update({ where: { id }, data, include })
 
-  // Correo al completar (fire & forget)
-  if (servicio.estado === "COMPLETADO" && servicio.vehiculo?.clienteEmail) {
-    const v = servicio.vehiculo
-    const nombresServicios = (servicio as typeof servicio & { items?: { nombre: string }[] })
-      .items?.map((i) => i.nombre) ?? [servicio.tipoServicio?.nombre ?? "Servicio"]
+  const v = servicio.vehiculo
+  const nombresServicios = (servicio as typeof servicio & { items?: { nombre: string }[] })
+    .items?.map((i) => i.nombre) ?? [servicio.tipoServicio?.nombre ?? "Servicio"]
+
+  // Correo 1: servicio iniciado (EN_ESPERA → EXTERIOR)
+  if (enviarEmailAlIniciar && v?.clienteEmail) {
+    enviarEmailServicioIniciado({
+      email:          v.clienteEmail as string,
+      clienteNombre:  v.clienteNombre ?? "",
+      placa:          v.placa,
+      marca:          v.marca,
+      servicios:      nombresServicios,
+      operario:       servicio.operario?.user.name ?? servicio.opExterior?.user.name ?? "Equipo QuickStop",
+      total:          servicio.total ?? servicio.monto ?? 0,
+      horaInicio:     servicio.horaInicio ?? new Date(),
+    }).catch(() => {})
+  }
+
+  // Correo 2: servicio completado (COMPLETADO = pago registrado)
+  if (servicio.estado === "COMPLETADO" && v?.clienteEmail) {
     enviarEmailServicioCompletado({
-      email: v.clienteEmail as string,
-      clienteNombre: v.clienteNombre ?? "",
-      placa: v.placa,
-      servicios: nombresServicios,
+      email:           v.clienteEmail as string,
+      clienteNombre:   v.clienteNombre ?? "",
+      placa:           v.placa,
+      marca:           v.marca,
+      servicios:       nombresServicios,
       duracionMinutos: servicio.duracionMinutos,
-      total: servicio.total ?? servicio.monto ?? 0,
-      metodoPago: servicio.metodoPago,
+      total:           servicio.total ?? servicio.monto ?? 0,
+      metodoPago:      servicio.metodoPago,
     }).catch(() => {})
   }
 

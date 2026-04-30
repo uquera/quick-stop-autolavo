@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { enviarEmailBienvenida, enviarEmailConfirmacion } from "@/lib/email"
+import { enviarEmailBienvenida } from "@/lib/email"
 import { getHoyRange } from "@/lib/timezone"
 
 const include = {
@@ -98,13 +98,10 @@ export async function POST(req: Request) {
       include,
     })
 
-    // Correos transaccionales (fire & forget)
+    // Correo de bienvenida solo en primera visita (fire & forget)
     const vehiculo = servicio.vehiculo
     if (vehiculo?.clienteEmail) {
-      const nombresServicios = servicio.items.map((i) => i.nombre)
-      const operarioNombre = servicio.operario?.user?.name ?? "Por asignar"
       const totalServicios = await prisma.servicio.count({ where: { vehiculoId } })
-
       if (totalServicios === 1) {
         enviarEmailBienvenida({
           email: vehiculo.clienteEmail,
@@ -112,16 +109,6 @@ export async function POST(req: Request) {
           placa: vehiculo.placa,
         }).catch(() => {})
       }
-
-      enviarEmailConfirmacion({
-        email: vehiculo.clienteEmail,
-        clienteNombre: vehiculo.clienteNombre ?? "",
-        placa: vehiculo.placa,
-        servicios: nombresServicios,
-        bahia: "Línea única",
-        operario: operarioNombre,
-        total: servicio.total ?? servicio.monto ?? 0,
-      }).catch(() => {})
     }
 
     return NextResponse.json(servicio, { status: 201 })
