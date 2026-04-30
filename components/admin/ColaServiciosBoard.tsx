@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import {
   Car, User, Wrench, CheckCircle2, ChevronRight, X, DollarSign,
-  MoreVertical, Pencil, Trash2, Droplets, Wind, Sparkles, CreditCard,
-  ArrowRight, Clock,
+  MoreVertical, Pencil, Trash2, Droplets, Sparkles, CreditCard,
+  ArrowRight, Clock, Users,
 } from "lucide-react"
 import ServicioTimer from "./ServicioTimer"
 import RegistroServicioForm from "./RegistroServicioForm"
@@ -27,10 +27,11 @@ type Servicio = {
   vehiculo: { placa: string; marca: string; modelo: string | null; tipo: string; color: string | null }
   tipoServicio: { nombre: string; precio: number; duracionMinutos: number } | null
   items: ServicioItem[]
-  operario:   OpRef
-  opExterior: OpRef
-  opSecado:   OpRef
-  opInterior: OpRef
+  operario:  OpRef
+  opLavado1: OpRef
+  opLavado2: OpRef
+  opLavado3: OpRef
+  opInterior:OpRef
 }
 type Operario = { id: string; user: { name: string | null } }
 
@@ -41,12 +42,12 @@ const METODOS_PAGO = [
   { value: "MERCADOPAGO",   label: "MercadoPago" },
 ]
 
+// Pipeline: 4 columnas
 const ETAPAS = [
-  { key: "EN_ESPERA",  label: "En Espera",      icon: Clock,      color: "#F59E0B", bg: "#FFFBEB", border: "#FDE68A" },
-  { key: "EXTERIOR",   label: "Lav. Exterior",  icon: Droplets,   color: "#2563EB", bg: "#EFF6FF", border: "#BFDBFE" },
-  { key: "SECADO",     label: "Secado",          icon: Wind,       color: "#0284C7", bg: "#F0F9FF", border: "#BAE6FD" },
+  { key: "EN_ESPERA",  label: "En Espera",     icon: Clock,      color: "#F59E0B", bg: "#FFFBEB", border: "#FDE68A" },
+  { key: "LAVADO",     label: "Lavado",         icon: Droplets,   color: "#2563EB", bg: "#EFF6FF", border: "#BFDBFE" },
   { key: "INTERIOR",   label: "Lav. Interior",  icon: Sparkles,   color: "#7C3AED", bg: "#F5F3FF", border: "#DDD6FE" },
-  { key: "POR_COBRAR", label: "Por Cobrar",      icon: CreditCard, color: "#059669", bg: "#ECFDF5", border: "#A7F3D0" },
+  { key: "POR_COBRAR", label: "Por Cobrar",     icon: CreditCard, color: "#059669", bg: "#ECFDF5", border: "#A7F3D0" },
 ]
 
 function nombreServicios(s: Servicio) {
@@ -66,6 +67,9 @@ function ModalCobrar({ servicio, onConfirmar, onCerrar }: {
   const [metodo, setMetodo] = useState("EFECTIVO")
   const [total, setTotal]   = useState(String(servicio.total ?? servicio.monto ?? 0))
 
+  const lavadistas = [servicio.opLavado1, servicio.opLavado2, servicio.opLavado3]
+    .filter(Boolean).map((o) => o!.user.name).filter(Boolean)
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
@@ -81,11 +85,12 @@ function ModalCobrar({ servicio, onConfirmar, onCerrar }: {
           <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
             <p className="font-bold text-gray-800">{servicio.vehiculo.placa} — {servicio.vehiculo.marca}</p>
             <p className="text-xs text-gray-500 mt-0.5">{nombreServicios(servicio)}</p>
-            <div className="flex gap-3 mt-2 text-xs text-gray-500">
-              {servicio.opExterior && <span>Ext: {servicio.opExterior.user.name}</span>}
-              {servicio.opSecado   && <span>Sec: {servicio.opSecado.user.name}</span>}
-              {servicio.opInterior && <span>Int: {servicio.opInterior.user.name}</span>}
-            </div>
+            {lavadistas.length > 0 && (
+              <p className="text-xs text-gray-400 mt-1">Lavado: {lavadistas.join(", ")}</p>
+            )}
+            {servicio.opInterior && (
+              <p className="text-xs text-gray-400">Interior: {servicio.opInterior.user.name}</p>
+            )}
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-700 mb-2 block">Método de pago *</label>
@@ -127,8 +132,8 @@ function ModalEditar({ servicio, operarios, onGuardar, onCerrar }: {
   onGuardar: (id: string, data: Record<string, string>) => void
   onCerrar: () => void
 }) {
-  const [operarioId,    setOperarioId]    = useState("")
-  const [observaciones, setObs]           = useState(servicio.observaciones ?? "")
+  const [operarioId, setOperarioId] = useState("")
+  const [observaciones, setObs]     = useState(servicio.observaciones ?? "")
 
   useEffect(() => {
     const op = operarios.find((o) => o.user.name === servicio.operario?.user.name)
@@ -177,20 +182,59 @@ function ModalEditar({ servicio, operarios, onGuardar, onCerrar }: {
   )
 }
 
+// ── Selector multi-operario con checkboxes ─────────────────────────────────
+function SelectorOperarios({
+  operarios, seleccionados, onChange, maxSlots = 3,
+}: {
+  operarios: Operario[]
+  seleccionados: string[]
+  onChange: (ids: string[]) => void
+  maxSlots?: number
+}) {
+  function toggle(id: string) {
+    if (seleccionados.includes(id)) {
+      onChange(seleccionados.filter((x) => x !== id))
+    } else if (seleccionados.length < maxSlots) {
+      onChange([...seleccionados, id])
+    }
+  }
+  return (
+    <div className="space-y-1">
+      <p className="text-xs text-gray-500 flex items-center gap-1">
+        <Users className="w-3 h-3" /> Operarios ({seleccionados.length}/{maxSlots})
+      </p>
+      <div className="flex flex-col gap-1">
+        {operarios.map((o) => {
+          const sel = seleccionados.includes(o.id)
+          return (
+            <button key={o.id} type="button" onClick={() => toggle(o.id)}
+              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all text-left ${sel ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-600 hover:border-blue-300"}`}>
+              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${sel ? "border-blue-500 bg-blue-500" : "border-gray-300"}`}>
+                {sel && <CheckCircle2 className="w-3 h-3 text-white" strokeWidth={3} />}
+              </div>
+              {o.user.name}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Card de servicio ───────────────────────────────────────────────────────────
 function ServicioCard({
   servicio: s, operarios, onSiguiente, onCobrar, onEditar, onEliminar,
 }: {
   servicio: Servicio
   operarios: Operario[]
-  onSiguiente: (s: Servicio, opId: string | null) => void
+  onSiguiente: (s: Servicio, opIds: string[]) => void
   onCobrar: (s: Servicio) => void
   onEditar: (s: Servicio) => void
   onEliminar: (id: string) => void
 }) {
-  const [menuAbierto, setMenuAbierto] = useState(false)
-  const [opSeleccionado, setOpSeleccionado] = useState("")
-  const menuRef = useRef<HTMLDivElement>(null)
+  const [menuAbierto, setMenuAbierto]     = useState(false)
+  const [opsSeleccionados, setOps]        = useState<string[]>([])
+  const menuRef                           = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -200,26 +244,26 @@ function ServicioCard({
     return () => document.removeEventListener("mousedown", handler)
   }, [menuAbierto])
 
-  // Calcular texto y color del botón según etapa
+  // Botón de avance según etapa
   const botonSiguiente = () => {
-    if (s.estado === "EN_ESPERA") return { label: "Iniciar lavado", icon: Droplets, color: "#2563EB" }
-    if (s.etapa === "EXTERIOR")   return { label: "Listo exterior →", icon: Wind,     color: "#0284C7" }
-    if (s.etapa === "SECADO")     return { label: "Listo secado →",   icon: Sparkles, color: "#7C3AED" }
-    if (s.etapa === "INTERIOR")   return { label: "Servicio listo ✓", icon: CheckCircle2, color: "#059669" }
+    if (s.estado === "EN_ESPERA") return { label: "Iniciar lavado",    icon: Droplets,      color: "#2563EB" }
+    if (s.etapa === "LAVADO")     return { label: "Listo lavado →",   icon: Sparkles,      color: "#7C3AED" }
+    if (s.etapa === "INTERIOR")   return { label: "Servicio listo ✓", icon: CheckCircle2,  color: "#059669" }
     return null
   }
   const btn = botonSiguiente()
 
-  // Etiqueta del operario de la etapa actual
-  const opEtapaActual = s.etapa === "EXTERIOR" ? s.opExterior
-    : s.etapa === "SECADO" ? s.opSecado
-    : s.etapa === "INTERIOR" ? s.opInterior
-    : s.operario
+  // Operarios ya asignados al lavado para mostrar en card
+  const lavadistas = [s.opLavado1, s.opLavado2, s.opLavado3]
+    .filter(Boolean).map((o) => o!.user.name).filter(Boolean)
 
   const estadoEstilo =
-    s.estado === "EN_ESPERA"  ? "border-amber-300 bg-amber-50/60"   :
+    s.estado === "EN_ESPERA"  ? "border-amber-300 bg-amber-50/60" :
     s.estado === "POR_COBRAR" ? "border-emerald-400 bg-emerald-50/60" :
     "border-blue-300 bg-blue-50/60"
+
+  // Interior solo permite 1 operario
+  const maxOps = s.etapa === "INTERIOR" ? 1 : 3
 
   return (
     <div className={`rounded-xl border-2 p-3 space-y-2.5 ${estadoEstilo}`}>
@@ -269,25 +313,33 @@ function ServicioCard({
         </div>
       )}
 
-      {/* Operario etapa actual */}
-      {opEtapaActual && (
+      {/* Operarios ya asignados */}
+      {lavadistas.length > 0 && (
         <div className="flex items-center gap-1.5 text-xs text-gray-500">
-          <User className="w-3 h-3" /><span>{opEtapaActual.user.name}</span>
+          <Users className="w-3 h-3" />
+          <span>{lavadistas.join(", ")}</span>
+        </div>
+      )}
+      {s.opInterior && s.etapa === null && s.estado !== "POR_COBRAR" && (
+        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+          <User className="w-3 h-3" />
+          <span>Int: {s.opInterior.user.name}</span>
         </div>
       )}
 
-      {/* Selector operario para la siguiente etapa */}
+      {/* Selector multi-operario para el siguiente avance */}
       {btn && operarios.length > 0 && (
-        <select value={opSeleccionado} onChange={(e) => setOpSeleccionado(e.target.value)}
-          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-600 bg-white focus:ring-1 focus:ring-blue-400 focus:border-transparent">
-          <option value="">— Operario (opcional) —</option>
-          {operarios.map((o) => <option key={o.id} value={o.id}>{o.user.name}</option>)}
-        </select>
+        <SelectorOperarios
+          operarios={operarios}
+          seleccionados={opsSeleccionados}
+          onChange={setOps}
+          maxSlots={maxOps}
+        />
       )}
 
-      {/* Botón avanzar etapa */}
+      {/* Botón avanzar */}
       {btn && (
-        <button onClick={() => onSiguiente(s, opSeleccionado || null)}
+        <button onClick={() => onSiguiente(s, opsSeleccionados)}
           className="w-full flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-lg text-white hover:opacity-90 transition-all"
           style={{ background: btn.color }}>
           <btn.icon className="w-3.5 h-3.5" /> {btn.label} <ChevronRight className="w-3 h-3" />
@@ -310,15 +362,15 @@ function ServicioCard({
 interface Props { userRole: string }
 
 export default function ColaServiciosBoard({ userRole }: Props) {
-  const [activos, setActivos]       = useState<Servicio[]>([])
-  const [historial, setHistorial]   = useState<Servicio[]>([])
-  const [operarios, setOperarios]   = useState<Operario[]>([])
-  const [tab, setTab]               = useState<"activos" | "historial">("activos")
-  const [loading, setLoading]       = useState(true)
-  const [showForm, setShowForm]     = useState(false)
-  const [cobrando, setCobrando]     = useState<Servicio | null>(null)
-  const [editando, setEditando]     = useState<Servicio | null>(null)
-  const intervalRef                 = useRef<NodeJS.Timeout | null>(null)
+  const [activos, setActivos]     = useState<Servicio[]>([])
+  const [historial, setHistorial] = useState<Servicio[]>([])
+  const [operarios, setOperarios] = useState<Operario[]>([])
+  const [tab, setTab]             = useState<"activos" | "historial">("activos")
+  const [loading, setLoading]     = useState(true)
+  const [showForm, setShowForm]   = useState(false)
+  const [cobrando, setCobrando]   = useState<Servicio | null>(null)
+  const [editando, setEditando]   = useState<Servicio | null>(null)
+  const intervalRef               = useRef<NodeJS.Timeout | null>(null)
 
   const fetchActivos = useCallback(async () => {
     try {
@@ -343,12 +395,12 @@ export default function ColaServiciosBoard({ userRole }: Props) {
   }, [fetchActivos, fetchHistorial])
 
   // ── Avanzar etapa ──────────────────────────────────────────────────────────
-  async function avanzarEtapa(s: Servicio, operarioEtapaId: string | null) {
+  async function avanzarEtapa(s: Servicio, operariosEtapaIds: string[]) {
     try {
       const res = await fetch(`/api/servicios/${s.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ siguiente: true, operarioEtapaId }),
+        body: JSON.stringify({ siguiente: true, operariosEtapaIds }),
       })
       if (!res.ok) { toast.error("Error avanzando etapa"); return }
       const updated = await res.json()
@@ -357,9 +409,7 @@ export default function ColaServiciosBoard({ userRole }: Props) {
         toast.success(`✅ ${s.vehiculo.placa} listo — pendiente de cobro`)
       } else {
         setActivos((prev) => prev.map((x) => x.id === s.id ? updated : x))
-        const etapaLabel =
-          updated.etapa === "SECADO"   ? "Secado" :
-          updated.etapa === "INTERIOR" ? "Interior" : "Exterior"
+        const etapaLabel = updated.etapa === "INTERIOR" ? "Lavado Interior" : "Lavado"
         toast.success(`${s.vehiculo.placa} → ${etapaLabel}`)
       }
     } catch { toast.error("Error de conexión") }
@@ -413,8 +463,7 @@ export default function ColaServiciosBoard({ userRole }: Props) {
   // ── Clasificar en columnas ─────────────────────────────────────────────────
   const col = {
     EN_ESPERA:  activos.filter((s) => s.estado === "EN_ESPERA"),
-    EXTERIOR:   activos.filter((s) => s.estado === "EN_PROCESO" && s.etapa === "EXTERIOR"),
-    SECADO:     activos.filter((s) => s.estado === "EN_PROCESO" && s.etapa === "SECADO"),
+    LAVADO:     activos.filter((s) => s.estado === "EN_PROCESO" && s.etapa === "LAVADO"),
     INTERIOR:   activos.filter((s) => s.estado === "EN_PROCESO" && s.etapa === "INTERIOR"),
     POR_COBRAR: activos.filter((s) => s.estado === "POR_COBRAR"),
   }
@@ -446,7 +495,7 @@ export default function ColaServiciosBoard({ userRole }: Props) {
         </div>
       )}
 
-      {/* ── Pipeline activos ── */}
+      {/* ── Pipeline ── */}
       {!loading && tab === "activos" && (
         <>
           {/* Indicador de flujo */}
@@ -466,14 +515,13 @@ export default function ColaServiciosBoard({ userRole }: Props) {
             ))}
           </div>
 
-          {/* Columnas del pipeline */}
-          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-3">
+          {/* 4 columnas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
             {ETAPAS.map((etapa) => {
               const cards = col[etapa.key as keyof typeof col] ?? []
               return (
                 <div key={etapa.key} className="rounded-xl border overflow-hidden flex flex-col"
                   style={{ borderColor: etapa.border, backgroundColor: etapa.bg }}>
-                  {/* Header columna */}
                   <div className="px-3 py-2.5 flex items-center justify-between border-b"
                     style={{ borderColor: etapa.border }}>
                     <div className="flex items-center gap-1.5">
@@ -485,7 +533,6 @@ export default function ColaServiciosBoard({ userRole }: Props) {
                       {cards.length}
                     </span>
                   </div>
-                  {/* Cards */}
                   <div className="p-2.5 space-y-2.5 flex-1 min-h-[120px]">
                     {cards.length === 0 ? (
                       <p className="text-xs text-gray-400 text-center py-6">Sin vehículos</p>
@@ -520,35 +567,38 @@ export default function ColaServiciosBoard({ userRole }: Props) {
             <p className="text-center text-gray-400 py-12 text-sm">Sin servicios completados hoy</p>
           ) : (
             <div className="divide-y divide-gray-100">
-              {historial.map((s) => (
-                <div key={s.id} className="px-4 py-3 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
-                      <Car className="w-4 h-4 text-green-600" />
+              {historial.map((s) => {
+                const lavadistas = [s.opLavado1, s.opLavado2, s.opLavado3]
+                  .filter(Boolean).map((o) => o!.user.name).filter(Boolean)
+                return (
+                  <div key={s.id} className="px-4 py-3 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
+                        <Car className="w-4 h-4 text-green-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-gray-800 font-mono">
+                          {s.vehiculo.placa} <span className="font-normal text-gray-500 text-sm">— {s.vehiculo.marca}</span>
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {nombreServicios(s)}
+                          {lavadistas.length > 0 && ` · Lav: ${lavadistas.join(", ")}`}
+                          {s.opInterior && ` · Int: ${s.opInterior.user.name}`}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-bold text-gray-800 font-mono">
-                        {s.vehiculo.placa} <span className="font-normal text-gray-500 text-sm">— {s.vehiculo.marca}</span>
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {nombreServicios(s)}
-                        {s.opExterior && ` · Ext: ${s.opExterior.user.name}`}
-                        {s.opSecado   && ` · Sec: ${s.opSecado.user.name}`}
-                        {s.opInterior && ` · Int: ${s.opInterior.user.name}`}
-                      </p>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <ServicioTimer
+                        horaInicio={s.horaInicio} horaIngreso={s.horaIngreso}
+                        duracionEstimada={duracionEstimada(s)} estado={s.estado} duracionFinal={s.duracionMinutos}
+                      />
+                      {s.total != null && <span className="font-bold text-gray-800 text-sm">${s.total.toLocaleString("es-CO")}</span>}
+                      {s.metodoPago && <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">{s.metodoPago}</span>}
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Completado</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <ServicioTimer
-                      horaInicio={s.horaInicio} horaIngreso={s.horaIngreso}
-                      duracionEstimada={duracionEstimada(s)} estado={s.estado} duracionFinal={s.duracionMinutos}
-                    />
-                    {s.total != null && <span className="font-bold text-gray-800 text-sm">${s.total.toLocaleString("es-CO")}</span>}
-                    {s.metodoPago && <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">{s.metodoPago}</span>}
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Completado</span>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

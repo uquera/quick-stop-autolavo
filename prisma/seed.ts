@@ -158,7 +158,7 @@ async function main() {
   // ── Servicios de ejemplo (últimos 3 días) ─────────────────────────────────
   const now = new Date()
   const estados = ["COMPLETADO", "COMPLETADO", "COMPLETADO", "POR_COBRAR", "EN_PROCESO"] as ("COMPLETADO" | "POR_COBRAR" | "EN_PROCESO" | "EN_ESPERA" | "CANCELADO")[]
-  const etapas  = [null, null, null, null, "EXTERIOR"] as (null | "EXTERIOR" | "SECADO" | "INTERIOR")[]
+  const etapas  = [null, null, null, null, "LAVADO"] as (null | "LAVADO" | "INTERIOR")[]
   const metodos = ["EFECTIVO", "TRANSFERENCIA", "TARJETA", "MERCADOPAGO", "EFECTIVO"] as const
 
   for (let dia = 0; dia < 3; dia++) {
@@ -190,8 +190,8 @@ async function main() {
           vehiculoId: vh,
           tipoServicioId: tipo,
           operarioId: operario,
-          opExteriorId: estado !== "EN_ESPERA" ? operarioIds[0] : null,
-          opSecadoId:   ["INTERIOR","POR_COBRAR","COMPLETADO"].includes(estado) ? operarioIds[1] : null,
+          opLavado1Id:  estado !== "EN_ESPERA" ? operarioIds[0] : null,
+          opLavado2Id:  estado !== "EN_ESPERA" ? operarioIds[1] : null,
           opInteriorId: ["POR_COBRAR","COMPLETADO"].includes(estado) ? operarioIds[2] : null,
           horaIngreso,
           horaInicio,

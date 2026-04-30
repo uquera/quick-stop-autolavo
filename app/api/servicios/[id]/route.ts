@@ -6,10 +6,11 @@ import { enviarEmailServicioIniciado, enviarEmailServicioCompletado } from "@/li
 
 const include = {
   vehiculo: true,
-  operario:   { include: { user: { select: { name: true } } } },
-  opExterior: { include: { user: { select: { name: true } } } },
-  opSecado:   { include: { user: { select: { name: true } } } },
-  opInterior: { include: { user: { select: { name: true } } } },
+  operario:  { include: { user: { select: { name: true } } } },
+  opLavado1: { include: { user: { select: { name: true } } } },
+  opLavado2: { include: { user: { select: { name: true } } } },
+  opLavado3: { include: { user: { select: { name: true } } } },
+  opInterior:{ include: { user: { select: { name: true } } } },
   tipoServicio: true,
   items: { include: { tipoServicio: true } },
 }
@@ -26,8 +27,8 @@ export async function PATCH(
   const {
     estado, metodoPago, monto, descuento, total,
     operarioId, observaciones,
-    // etapa pipeline
-    siguiente, operarioEtapaId,
+    // etapa pipeline — ahora acepta array de IDs
+    siguiente, operariosEtapaIds,
   } = body
 
   const actual = await prisma.servicio.findUnique({ where: { id } })
@@ -36,36 +37,35 @@ export async function PATCH(
   const data: Record<string, unknown> = {}
   let enviarEmailAlIniciar = false
 
-  // ── Avance de etapa en la línea de lavado ─────────────────────────────────
+  // ── Avance de etapa ────────────────────────────────────────────────────────
   if (siguiente) {
-    const opId = operarioEtapaId || operarioId || null
+    // operariosEtapaIds: string[] con 1-3 IDs
+    const opIds: (string | null)[] = Array.isArray(operariosEtapaIds)
+      ? [operariosEtapaIds[0] ?? null, operariosEtapaIds[1] ?? null, operariosEtapaIds[2] ?? null]
+      : [null, null, null]
 
     if (actual.estado === "EN_ESPERA") {
-      // Iniciar → Lavado Exterior
+      // EN_ESPERA → LAVADO
       data.estado     = "EN_PROCESO"
-      data.etapa      = "EXTERIOR"
+      data.etapa      = "LAVADO"
       data.horaInicio = new Date()
-      if (opId) data.opExteriorId = opId
-      // Correo "servicio iniciado" (fire & forget)
+      data.opLavado1Id = opIds[0]
+      data.opLavado2Id = opIds[1]
+      data.opLavado3Id = opIds[2]
       enviarEmailAlIniciar = true
 
-    } else if (actual.etapa === "EXTERIOR") {
-      // Exterior → Secado
-      data.etapa = "SECADO"
-      if (opId) data.opExteriorId = opId
-
-    } else if (actual.etapa === "SECADO") {
-      // Secado → Interior
+    } else if (actual.etapa === "LAVADO") {
+      // LAVADO → INTERIOR
       data.etapa = "INTERIOR"
-      if (opId) data.opSecadoId = opId
+      data.opLavado1Id = opIds[0]
+      data.opLavado2Id = opIds[1]
+      data.opLavado3Id = opIds[2]
 
     } else if (actual.etapa === "INTERIOR") {
-      // Interior → Por Cobrar + descontar consumibles
-      data.estado    = "POR_COBRAR"
-      data.etapa     = null
-      if (opId) data.opInteriorId = opId
-
-      // Descontar materiales del stock
+      // INTERIOR → POR_COBRAR + descontar consumibles
+      data.estado      = "POR_COBRAR"
+      data.etapa       = null
+      data.opInteriorId = opIds[0]
       await descontarConsumiblbles(id, actual.tipoServicioId)
     }
 
@@ -78,13 +78,13 @@ export async function PATCH(
     })
   }
 
-  // ── Cambio de estado directo (cancelar, editar operario, etc.) ────────────
+  // ── Cambio directo de estado ───────────────────────────────────────────────
   if (estado && estado !== actual.estado && !siguiente) {
     data.estado = estado
 
     if (estado === "EN_PROCESO" && !actual.horaInicio) {
       data.horaInicio = new Date()
-      data.etapa = "EXTERIOR"
+      data.etapa = "LAVADO"
     }
 
     if (estado === "COMPLETADO" && !actual.horaSalida) {
@@ -96,13 +96,12 @@ export async function PATCH(
 
     await registrarCambio({
       entidadTipo: "servicio", entidadId: id,
-      campo: "estado",
-      valorAntes: actual.estado, valorDespues: estado,
+      campo: "estado", valorAntes: actual.estado, valorDespues: estado,
       userId: session.user.id, userName: session.user.name ?? session.user.email,
     })
   }
 
-  // ── Registrar pago (POR_COBRAR → COMPLETADO) ──────────────────────────────
+  // ── POR_COBRAR → COMPLETADO (registrar pago) ───────────────────────────────
   if (estado === "COMPLETADO" && actual.estado === "POR_COBRAR") {
     data.estado     = "COMPLETADO"
     data.horaSalida = new Date()
@@ -116,11 +115,11 @@ export async function PATCH(
     })
   }
 
-  if (metodoPago !== undefined) data.metodoPago = metodoPago
-  if (monto !== undefined)      data.monto      = isNaN(parseFloat(monto))      ? null : parseFloat(monto)
-  if (descuento !== undefined)  data.descuento  = isNaN(parseFloat(descuento))  ? 0    : Math.max(0, parseFloat(descuento))
-  if (total !== undefined)      data.total      = isNaN(parseFloat(total))      ? null : Math.max(0, parseFloat(total))
-  if (operarioId !== undefined) data.operarioId = operarioId || null
+  if (metodoPago !== undefined)    data.metodoPago    = metodoPago
+  if (monto !== undefined)         data.monto         = isNaN(parseFloat(monto))     ? null : parseFloat(monto)
+  if (descuento !== undefined)     data.descuento     = isNaN(parseFloat(descuento)) ? 0    : Math.max(0, parseFloat(descuento))
+  if (total !== undefined)         data.total         = isNaN(parseFloat(total))     ? null : Math.max(0, parseFloat(total))
+  if (operarioId !== undefined)    data.operarioId    = operarioId || null
   if (observaciones !== undefined) data.observaciones = observaciones
 
   const servicio = await prisma.servicio.update({ where: { id }, data, include })
@@ -129,31 +128,33 @@ export async function PATCH(
   const nombresServicios = (servicio as typeof servicio & { items?: { nombre: string }[] })
     .items?.map((i) => i.nombre) ?? [servicio.tipoServicio?.nombre ?? "Servicio"]
 
-  // Correo 1: servicio iniciado (EN_ESPERA → EXTERIOR)
+  // Correo: servicio iniciado
   if (enviarEmailAlIniciar && v?.clienteEmail) {
+    const opNombre = [servicio.opLavado1, servicio.opLavado2, servicio.opLavado3]
+      .filter(Boolean).map((o) => o!.user.name).join(", ") || servicio.operario?.user.name || "Equipo QuickStop"
     enviarEmailServicioIniciado({
-      email:          v.clienteEmail as string,
-      clienteNombre:  v.clienteNombre ?? "",
-      placa:          v.placa,
-      marca:          v.marca,
-      servicios:      nombresServicios,
-      operario:       servicio.operario?.user.name ?? servicio.opExterior?.user.name ?? "Equipo QuickStop",
-      total:          servicio.total ?? servicio.monto ?? 0,
-      horaInicio:     servicio.horaInicio ?? new Date(),
+      email: v.clienteEmail as string,
+      clienteNombre: v.clienteNombre ?? "",
+      placa: v.placa,
+      marca: v.marca,
+      servicios: nombresServicios,
+      operario: opNombre,
+      total: servicio.total ?? servicio.monto ?? 0,
+      horaInicio: servicio.horaInicio ?? new Date(),
     }).catch(() => {})
   }
 
-  // Correo 2: servicio completado (COMPLETADO = pago registrado)
+  // Correo: servicio completado
   if (servicio.estado === "COMPLETADO" && v?.clienteEmail) {
     enviarEmailServicioCompletado({
-      email:           v.clienteEmail as string,
-      clienteNombre:   v.clienteNombre ?? "",
-      placa:           v.placa,
-      marca:           v.marca,
-      servicios:       nombresServicios,
+      email: v.clienteEmail as string,
+      clienteNombre: v.clienteNombre ?? "",
+      placa: v.placa,
+      marca: v.marca,
+      servicios: nombresServicios,
       duracionMinutos: servicio.duracionMinutos,
-      total:           servicio.total ?? servicio.monto ?? 0,
-      metodoPago:      servicio.metodoPago,
+      total: servicio.total ?? servicio.monto ?? 0,
+      metodoPago: servicio.metodoPago,
     }).catch(() => {})
   }
 
@@ -168,13 +169,12 @@ export async function DELETE(
   if (!session || session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   }
-
   const { id } = await params
   await prisma.servicio.delete({ where: { id } })
   return NextResponse.json({ ok: true })
 }
 
-// ── Helper: descontar consumibles al marcar servicio listo ─────────────────
+// ── Helper: descontar consumibles al marcar listo ──────────────────────────
 async function descontarConsumiblbles(servicioId: string, tipoServicioId: string | null) {
   if (!tipoServicioId) return
 
@@ -187,7 +187,6 @@ async function descontarConsumiblbles(servicioId: string, tipoServicioId: string
   for (const cfg of configs) {
     if (cfg.cantidadPorServicio <= 0) continue
 
-    // Registrar consumo en historial
     await prisma.consumibleUsado.create({
       data: {
         servicioId,
@@ -198,16 +197,10 @@ async function descontarConsumiblbles(servicioId: string, tipoServicioId: string
       },
     })
 
-    // Descontar del stock (sin ir a negativo)
     const mat = await prisma.material.findUnique({ where: { id: cfg.materialId } })
     if (!mat) continue
-
     const nuevoStock = Math.max(0, mat.stockTotal - cfg.cantidadPorServicio)
-    await prisma.material.update({
-      where: { id: cfg.materialId },
-      data: { stockTotal: nuevoStock },
-    })
-
+    await prisma.material.update({ where: { id: cfg.materialId }, data: { stockTotal: nuevoStock } })
     await prisma.movimientoMaterial.create({
       data: {
         materialId: cfg.materialId,

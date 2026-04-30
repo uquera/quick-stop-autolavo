@@ -93,8 +93,9 @@ model Operario {
   user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   servicios Servicio[]
 
-  serviciosExterior Servicio[] @relation("ExtOp")
-  serviciosSecado   Servicio[] @relation("SecOp")
+  serviciosLavado1  Servicio[] @relation("LavOp1")
+  serviciosLavado2  Servicio[] @relation("LavOp2")
+  serviciosLavado3  Servicio[] @relation("LavOp3")
   serviciosInterior Servicio[] @relation("IntOp")
 
   cierres       CierreCaja[]
@@ -162,10 +163,11 @@ model Servicio {
   // Etapa en la línea de trabajo
   etapa          EtapaLavado?
 
-  // Quién ejecutó cada etapa
-  opExteriorId   String?
-  opSecadoId     String?
-  opInteriorId   String?
+  // Operarios del lavado (hasta 3 simultáneos) y del interior
+  opLavado1Id  String?
+  opLavado2Id  String?
+  opLavado3Id  String?
+  opInteriorId String?
 
   horaIngreso     DateTime       @default(now())
   horaInicio      DateTime?
@@ -187,9 +189,10 @@ model Servicio {
   tipoServicio TipoServicio? @relation(fields: [tipoServicioId], references: [id])
   items        ServicioItem[]
 
-  opExterior Operario? @relation("ExtOp", fields: [opExteriorId], references: [id])
-  opSecado   Operario? @relation("SecOp", fields: [opSecadoId],   references: [id])
-  opInterior Operario? @relation("IntOp", fields: [opInteriorId], references: [id])
+  opLavado1  Operario? @relation("LavOp1", fields: [opLavado1Id], references: [id])
+  opLavado2  Operario? @relation("LavOp2", fields: [opLavado2Id], references: [id])
+  opLavado3  Operario? @relation("LavOp3", fields: [opLavado3Id], references: [id])
+  opInterior Operario? @relation("IntOp",  fields: [opInteriorId], references: [id])
 
   consumos ConsumibleUsado[]
 
@@ -218,8 +221,7 @@ enum EstadoServicio {
 }
 
 enum EtapaLavado {
-  EXTERIOR
-  SECADO
+  LAVADO
   INTERIOR
 }
 

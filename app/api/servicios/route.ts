@@ -6,10 +6,11 @@ import { getHoyRange } from "@/lib/timezone"
 
 const include = {
   vehiculo: true,
-  operario: { include: { user: { select: { name: true } } } },
-  opExterior: { include: { user: { select: { name: true } } } },
-  opSecado:   { include: { user: { select: { name: true } } } },
-  opInterior: { include: { user: { select: { name: true } } } },
+  operario:  { include: { user: { select: { name: true } } } },
+  opLavado1: { include: { user: { select: { name: true } } } },
+  opLavado2: { include: { user: { select: { name: true } } } },
+  opLavado3: { include: { user: { select: { name: true } } } },
+  opInterior:{ include: { user: { select: { name: true } } } },
   tipoServicio: true,
   items: { include: { tipoServicio: true } },
 }

@@ -27,10 +27,11 @@ export async function GET(req: NextRequest) {
   const servicios = await prisma.servicio.findMany({
     where: { estado: "COMPLETADO", horaSalida: { gte: inicio } },
     include: {
-      operario:   { include: { user: { select: { name: true } } } },
-      opExterior: { include: { user: { select: { name: true } } } },
-      opSecado:   { include: { user: { select: { name: true } } } },
-      opInterior: { include: { user: { select: { name: true } } } },
+      operario:  { include: { user: { select: { name: true } } } },
+      opLavado1: { include: { user: { select: { name: true } } } },
+      opLavado2: { include: { user: { select: { name: true } } } },
+      opLavado3: { include: { user: { select: { name: true } } } },
+      opInterior:{ include: { user: { select: { name: true } } } },
       items: true,
       tipoServicio: true,
       consumos: true,
@@ -58,18 +59,19 @@ export async function GET(req: NextRequest) {
     op.velocidad        = op.duracionPromedio > 0 ? Math.round((60 / op.duracionPromedio) * 10) / 10 : 0
   }
 
-  // ── Participación por etapa (exterior/secado/interior) ────────────────────
-  const porEtapaOp: Record<string, { nombre: string; exterior: number; secado: number; interior: number }> = {}
+  // ── Participación por etapa (lavado/interior) ─────────────────────────────
+  const porEtapaOp: Record<string, { nombre: string; lavado: number; interior: number }> = {}
   for (const s of servicios) {
-    const addEtapa = (opRef: typeof s.opExterior, etapa: "exterior" | "secado" | "interior") => {
+    const addOp = (opRef: { user: { name: string | null } } | null, etapa: "lavado" | "interior") => {
       if (!opRef) return
       const k = opRef.user.name ?? "?"
-      if (!porEtapaOp[k]) porEtapaOp[k] = { nombre: k, exterior: 0, secado: 0, interior: 0 }
+      if (!porEtapaOp[k]) porEtapaOp[k] = { nombre: k, lavado: 0, interior: 0 }
       porEtapaOp[k][etapa]++
     }
-    addEtapa(s.opExterior, "exterior")
-    addEtapa(s.opSecado,   "secado")
-    addEtapa(s.opInterior, "interior")
+    addOp(s.opLavado1, "lavado")
+    addOp(s.opLavado2, "lavado")
+    addOp(s.opLavado3, "lavado")
+    addOp(s.opInterior, "interior")
   }
 
   // ── Servicio más rentable ─────────────────────────────────────────────────
@@ -127,7 +129,7 @@ export async function GET(req: NextRequest) {
     periodo,
     resumen: { totalIngresos, totalServicios, duracionPromedio, ticketPromedio },
     porOperario:  Object.values(porOperario).filter((o) => o.nombre !== "Sin asignar").sort((a, b) => b.ingresos - a.ingresos),
-    porEtapaOp:   Object.values(porEtapaOp).sort((a, b) => (b.exterior + b.secado + b.interior) - (a.exterior + a.secado + a.interior)),
+    porEtapaOp:   Object.values(porEtapaOp).sort((a, b) => (b.lavado + b.interior) - (a.lavado + a.interior)),
     porServicio:  Object.values(porServicio).sort((a, b) => b.ingresos - a.ingresos),
     porMaterial:  Object.values(porMaterial).sort((a, b) => b.totalUsado - a.totalUsado),
     evolucion:    Object.values(porDia).sort((a, b) => a.fecha.localeCompare(b.fecha)),
