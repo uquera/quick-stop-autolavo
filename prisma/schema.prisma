@@ -297,6 +297,19 @@ enum TipoMovimiento {
   SALIDA
 }
 
+// ─── GASTOS OPERACIONALES ─────────────────────────────────────────────────────
+
+model GastoOperacional {
+  id        String   @id @default(cuid())
+  concepto  String
+  monto     Float
+  categoria String   @default("General")
+  fecha     DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@map("gastos_operacionales")
+}
+
 // ─── PAGOS A OPERARIOS ────────────────────────────────────────────────────────
 
 model PagoOperario {

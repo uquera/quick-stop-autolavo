@@ -56,6 +56,13 @@ export async function GET() {
       vehiculos:     cierresHoy.reduce((a, c) => a + c.totalVehiculos, 0)     + totalesPeriodo.vehiculos,
     }
 
+    // Gastos operacionales del día
+    const gastosOp = await prisma.gastoOperacional.findMany({
+      where: { fecha: { gte: inicioHoy(), lte: finHoy() } },
+      orderBy: { fecha: "desc" },
+    })
+    const totalGastosOp = gastosOp.reduce((a, g) => a + g.monto, 0)
+
     // Pagos a operarios del día
     const pagosOperarios = await prisma.pagoOperario.findMany({
       where: { fecha: { gte: inicioHoy(), lte: finHoy() } },
@@ -101,7 +108,9 @@ export async function GET() {
       totalPagos,
       costoInsumos,
       detalleInsumos: Object.values(detalleInsumos).sort((a, b) => b.costoTotal - a.costoTotal),
-      gananciaNeta: totalDia.total - totalPagos - costoInsumos,
+      gastosOperacionales: gastosOp,
+      totalGastosOp,
+      gananciaNeta: totalDia.total - totalPagos - costoInsumos - totalGastosOp,
       tienePeriodoAbierto: serviciosPeriodo.length > 0 || cierresHoy.length === 0,
     })
   } catch (err) {

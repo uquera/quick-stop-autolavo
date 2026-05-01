@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import {
   CheckCircle2, DollarSign, Plus, ChevronDown, ChevronUp,
-  Users, Trash2, TrendingUp, TrendingDown, Minus, X,
+  Users, Trash2, TrendingUp, TrendingDown, Minus, X, Receipt,
 } from "lucide-react"
 
 function formatARS(n: number) {
@@ -35,15 +35,18 @@ type PagoOp = {
 }
 type Operario = { id: string; user: { name: string | null } }
 type DetalleInsumo = { nombre: string; unidad: string; cantidadTotal: number; costoTotal: number }
+type GastoOp = { id: string; concepto: string; monto: number; categoria: string; fecha: string }
 type CajaData = {
-  cierresHoy:       Cierre[]
-  periodoActual:    PeriodoActual
-  totalDia:         TotalDia
-  pagosOperarios:   PagoOp[]
-  totalPagos:       number
-  costoInsumos:     number
-  detalleInsumos:   DetalleInsumo[]
-  gananciaNeta:     number
+  cierresHoy:          Cierre[]
+  periodoActual:       PeriodoActual
+  totalDia:            TotalDia
+  pagosOperarios:      PagoOp[]
+  totalPagos:          number
+  costoInsumos:        number
+  detalleInsumos:      DetalleInsumo[]
+  gastosOperacionales: GastoOp[]
+  totalGastosOp:       number
+  gananciaNeta:        number
   tienePeriodoAbierto: boolean
 }
 
@@ -187,6 +190,77 @@ function ModalPagoOperario({ operarios, onGuardar, onCerrar }: {
   )
 }
 
+const CATEGORIAS_GASTO = [
+  "Limpieza y mantenimiento",
+  "Combustible",
+  "Servicios (agua, luz, internet)",
+  "Alquiler",
+  "Repuestos / herramientas",
+  "Publicidad",
+  "Otros",
+]
+
+function ModalGastoOperacional({ onGuardar, onCerrar }: {
+  onGuardar: (concepto: string, monto: number, categoria: string) => void
+  onCerrar: () => void
+}) {
+  const [concepto,   setConcepto]   = useState("")
+  const [monto,      setMonto]      = useState("")
+  const [categoria,  setCategoria]  = useState("Limpieza y mantenimiento")
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4"
+          style={{ background: "linear-gradient(135deg, #BE123C, #F43F5E)" }}>
+          <div className="flex items-center gap-2 text-white">
+            <Receipt className="w-5 h-5" />
+            <span className="font-semibold">Registrar gasto operacional</span>
+          </div>
+          <button onClick={onCerrar} className="text-white/60 hover:text-white"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-gray-700 mb-1 block">Categoría</label>
+            <select value={categoria} onChange={(e) => setCategoria(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-rose-500">
+              {CATEGORIAS_GASTO.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-700 mb-1 block">Concepto *</label>
+            <input value={concepto} onChange={(e) => setConcepto(e.target.value)}
+              placeholder="Ej: Detergente 5L, pago internet, nafta..."
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-rose-500" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-700 mb-1 block">Monto *</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+              <input type="number" value={monto} onChange={(e) => setMonto(e.target.value)}
+                placeholder="0" min="0"
+                className="w-full border border-gray-300 rounded-lg pl-7 pr-3 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-rose-500" />
+            </div>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button onClick={onCerrar}
+              className="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-600 hover:bg-gray-50">
+              Cancelar
+            </button>
+            <button
+              disabled={!concepto || !monto}
+              onClick={() => onGuardar(concepto, parseFloat(monto), categoria)}
+              className="flex-1 py-2.5 text-white text-sm font-bold rounded-xl disabled:opacity-50"
+              style={{ background: "linear-gradient(135deg, #BE123C, #F43F5E)" }}>
+              Registrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function CajaPage() {
   const [data,        setData]        = useState<CajaData | null>(null)
@@ -195,7 +269,8 @@ export default function CajaPage() {
   const [notas,       setNotas]       = useState("")
   const [loading,     setLoading]     = useState(false)
   const [cargando,    setCargando]    = useState(true)
-  const [showPagoModal, setShowPagoModal] = useState(false)
+  const [showPagoModal,  setShowPagoModal]  = useState(false)
+  const [showGastoModal, setShowGastoModal] = useState(false)
 
   async function fetchCaja() {
     try {
@@ -239,6 +314,29 @@ export default function CajaPage() {
     } catch { toast.error("Error de conexión") }
   }
 
+  async function registrarGasto(concepto: string, monto: number, categoria: string) {
+    try {
+      const res = await fetch("/api/gastos-operacionales", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ concepto, monto, categoria }),
+      })
+      if (!res.ok) { toast.error("Error registrando gasto"); return }
+      setShowGastoModal(false)
+      await fetchCaja()
+      toast.success(`🧾 Gasto registrado — ${formatARS(monto)}`)
+    } catch { toast.error("Error de conexión") }
+  }
+
+  async function eliminarGasto(id: string) {
+    if (!confirm("¿Eliminar este gasto?")) return
+    try {
+      await fetch(`/api/gastos-operacionales/${id}`, { method: "DELETE" })
+      await fetchCaja()
+      toast.success("Gasto eliminado")
+    } catch { toast.error("Error de conexión") }
+  }
+
   async function eliminarPago(id: string) {
     if (!confirm("¿Eliminar este pago?")) return
     try {
@@ -258,6 +356,7 @@ export default function CajaPage() {
 
   const totalPagos    = data?.totalPagos    ?? 0
   const costoInsumos  = data?.costoInsumos  ?? 0
+  const totalGastosOp = data?.totalGastosOp ?? 0
   const gananciaNeta  = data?.gananciaNeta  ?? 0
   const ingresosDia   = td?.total ?? 0
 
@@ -299,6 +398,14 @@ export default function CajaPage() {
                 ))}
               </div>
             )}
+            {/* Gastos operacionales */}
+            <div className="px-5 py-3 flex items-center justify-between border-t border-dashed border-gray-100">
+              <div className="flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-rose-400" />
+                <span className="text-sm text-gray-700">Gastos operacionales</span>
+              </div>
+              <span className="font-semibold text-rose-500">− {formatARS(totalGastosOp)}</span>
+            </div>
             {/* Operarios */}
             <div className="px-5 py-3 flex items-center justify-between border-t border-dashed border-gray-100">
               <div className="flex items-center gap-2">
@@ -412,6 +519,62 @@ export default function CajaPage() {
         )}
       </div>
 
+      {/* ── Gastos operacionales ── */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Receipt className="w-4 h-4 text-rose-500" />
+            <h2 className="font-bold text-gray-800">Gastos operacionales</h2>
+            {totalGastosOp > 0 && (
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
+                {formatARS(totalGastosOp)}
+              </span>
+            )}
+          </div>
+          <button onClick={() => setShowGastoModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold"
+            style={{ background: "linear-gradient(135deg, #BE123C, #F43F5E)" }}>
+            <Plus className="w-3.5 h-3.5" /> Registrar gasto
+          </button>
+        </div>
+
+        {(data?.gastosOperacionales ?? []).length === 0 ? (
+          <p className="text-center text-sm text-gray-400 py-8">Sin gastos registrados hoy</p>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {(data?.gastosOperacionales ?? []).map((g) => (
+              <div key={g.id} className="flex items-center justify-between px-5 py-3 gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0">
+                    <Receipt className="w-4 h-4 text-rose-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-gray-800 text-sm">{g.concepto}</p>
+                    <p className="text-xs text-gray-400">{g.categoria}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="text-right">
+                    <p className="font-bold text-rose-500">{formatARS(g.monto)}</p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(g.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                  <button onClick={() => eliminarGasto(g.id)}
+                    className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            <div className="px-5 py-3 flex items-center justify-between bg-rose-50/60 border-t border-rose-100">
+              <span className="text-sm font-semibold text-gray-700">Total gastos hoy</span>
+              <span className="font-black text-rose-500 text-lg">{formatARS(totalGastosOp)}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* ── Cerrar turno ── */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
         <div className="flex items-center gap-2 mb-1">
@@ -443,6 +606,14 @@ export default function CajaPage() {
           </p>
         )}
       </div>
+
+      {/* Modal gasto operacional */}
+      {showGastoModal && (
+        <ModalGastoOperacional
+          onGuardar={registrarGasto}
+          onCerrar={() => setShowGastoModal(false)}
+        />
+      )}
 
       {/* Modal pago operario */}
       {showPagoModal && (
