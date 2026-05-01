@@ -6,11 +6,12 @@ import { enviarEmailServicioIniciado, enviarEmailServicioCompletado } from "@/li
 
 const include = {
   vehiculo: true,
-  operario:  { include: { user: { select: { name: true } } } },
-  opLavado1: { include: { user: { select: { name: true } } } },
-  opLavado2: { include: { user: { select: { name: true } } } },
-  opLavado3: { include: { user: { select: { name: true } } } },
-  opInterior:{ include: { user: { select: { name: true } } } },
+  operario:   { include: { user: { select: { name: true } } } },
+  opLavado1:  { include: { user: { select: { name: true } } } },
+  opInterior: { include: { user: { select: { name: true } } } },
+  opInterior2:{ include: { user: { select: { name: true } } } },
+  opInterior3:{ include: { user: { select: { name: true } } } },
+  opInterior4:{ include: { user: { select: { name: true } } } },
   tipoServicio: true,
   items: { include: { tipoServicio: true } },
 }
@@ -41,31 +42,35 @@ export async function PATCH(
   if (siguiente) {
     // operariosEtapaIds: string[] con 1-3 IDs
     const opIds: (string | null)[] = Array.isArray(operariosEtapaIds)
-      ? [operariosEtapaIds[0] ?? null, operariosEtapaIds[1] ?? null, operariosEtapaIds[2] ?? null]
-      : [null, null, null]
+      ? [
+          operariosEtapaIds[0] ?? null,
+          operariosEtapaIds[1] ?? null,
+          operariosEtapaIds[2] ?? null,
+          operariosEtapaIds[3] ?? null,
+        ]
+      : [null, null, null, null]
 
     if (actual.estado === "EN_ESPERA") {
-      // EN_ESPERA → LAVADO
-      data.estado     = "EN_PROCESO"
-      data.etapa      = "LAVADO"
-      data.horaInicio = new Date()
+      // EN_ESPERA → LAVADO (1 operario)
+      data.estado      = "EN_PROCESO"
+      data.etapa       = "LAVADO"
+      data.horaInicio  = new Date()
       data.opLavado1Id = opIds[0]
-      data.opLavado2Id = opIds[1]
-      data.opLavado3Id = opIds[2]
       enviarEmailAlIniciar = true
 
     } else if (actual.etapa === "LAVADO") {
-      // LAVADO → INTERIOR
-      data.etapa = "INTERIOR"
-      data.opLavado1Id = opIds[0]
-      data.opLavado2Id = opIds[1]
-      data.opLavado3Id = opIds[2]
+      // LAVADO → INTERIOR (hasta 4 operarios)
+      data.etapa        = "INTERIOR"
+      data.opLavado1Id  = opIds[0]
 
     } else if (actual.etapa === "INTERIOR") {
-      // INTERIOR → POR_COBRAR + descontar consumibles
-      data.estado      = "POR_COBRAR"
-      data.etapa       = null
-      data.opInteriorId = opIds[0]
+      // INTERIOR → POR_COBRAR + descontar consumibles (hasta 4 operarios)
+      data.estado       = "POR_COBRAR"
+      data.etapa        = null
+      data.opInteriorId  = opIds[0]
+      data.opInterior2Id = opIds[1]
+      data.opInterior3Id = opIds[2]
+      data.opInterior4Id = opIds[3]
       await descontarConsumiblbles(id, actual.tipoServicioId)
     }
 
@@ -130,7 +135,7 @@ export async function PATCH(
 
   // Correo: servicio iniciado
   if (enviarEmailAlIniciar && v?.clienteEmail) {
-    const opNombre = [servicio.opLavado1, servicio.opLavado2, servicio.opLavado3]
+    const opNombre = [servicio.opLavado1]
       .filter(Boolean).map((o) => o!.user.name).join(", ") || servicio.operario?.user.name || "Equipo QuickStop"
     enviarEmailServicioIniciado({
       email: v.clienteEmail as string,

@@ -93,10 +93,11 @@ model Operario {
   user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   servicios Servicio[]
 
-  serviciosLavado1  Servicio[] @relation("LavOp1")
-  serviciosLavado2  Servicio[] @relation("LavOp2")
-  serviciosLavado3  Servicio[] @relation("LavOp3")
-  serviciosInterior Servicio[] @relation("IntOp")
+  serviciosLavado    Servicio[] @relation("LavOp1")
+  serviciosInterior1 Servicio[] @relation("IntOp1")
+  serviciosInterior2 Servicio[] @relation("IntOp2")
+  serviciosInterior3 Servicio[] @relation("IntOp3")
+  serviciosInterior4 Servicio[] @relation("IntOp4")
 
   cierres       CierreCaja[]
   pagos         PagoOperario[]
@@ -163,11 +164,12 @@ model Servicio {
   // Etapa en la línea de trabajo
   etapa          EtapaLavado?
 
-  // Operarios del lavado (hasta 3 simultáneos) y del interior
-  opLavado1Id  String?
-  opLavado2Id  String?
-  opLavado3Id  String?
-  opInteriorId String?
+  // Operarios del lavado (1) y del interior (hasta 4 simultáneos)
+  opLavado1Id   String?
+  opInteriorId  String?
+  opInterior2Id String?
+  opInterior3Id String?
+  opInterior4Id String?
 
   horaIngreso     DateTime       @default(now())
   horaInicio      DateTime?
@@ -189,10 +191,11 @@ model Servicio {
   tipoServicio TipoServicio? @relation(fields: [tipoServicioId], references: [id])
   items        ServicioItem[]
 
-  opLavado1  Operario? @relation("LavOp1", fields: [opLavado1Id], references: [id])
-  opLavado2  Operario? @relation("LavOp2", fields: [opLavado2Id], references: [id])
-  opLavado3  Operario? @relation("LavOp3", fields: [opLavado3Id], references: [id])
-  opInterior Operario? @relation("IntOp",  fields: [opInteriorId], references: [id])
+  opLavado1  Operario? @relation("LavOp1",  fields: [opLavado1Id],   references: [id])
+  opInterior  Operario? @relation("IntOp1", fields: [opInteriorId],  references: [id])
+  opInterior2 Operario? @relation("IntOp2", fields: [opInterior2Id], references: [id])
+  opInterior3 Operario? @relation("IntOp3", fields: [opInterior3Id], references: [id])
+  opInterior4 Operario? @relation("IntOp4", fields: [opInterior4Id], references: [id])
 
   consumos ConsumibleUsado[]
 

@@ -27,11 +27,12 @@ type Servicio = {
   vehiculo: { placa: string; marca: string; modelo: string | null; tipo: string; color: string | null }
   tipoServicio: { nombre: string; precio: number; duracionMinutos: number } | null
   items: ServicioItem[]
-  operario:  OpRef
-  opLavado1: OpRef
-  opLavado2: OpRef
-  opLavado3: OpRef
-  opInterior:OpRef
+  operario:   OpRef
+  opLavado1:  OpRef
+  opInterior: OpRef
+  opInterior2:OpRef
+  opInterior3:OpRef
+  opInterior4:OpRef
 }
 type Operario = { id: string; user: { name: string | null } }
 
@@ -67,7 +68,8 @@ function ModalCobrar({ servicio, onConfirmar, onCerrar }: {
   const [metodo, setMetodo] = useState("EFECTIVO")
   const [total, setTotal]   = useState(String(servicio.total ?? servicio.monto ?? 0))
 
-  const lavadistas = [servicio.opLavado1, servicio.opLavado2, servicio.opLavado3]
+  const lavadistas    = [servicio.opLavado1].filter(Boolean).map((o) => o!.user.name).filter(Boolean)
+  const interioristas = [servicio.opInterior, servicio.opInterior2, servicio.opInterior3, servicio.opInterior4]
     .filter(Boolean).map((o) => o!.user.name).filter(Boolean)
 
   return (
@@ -88,8 +90,8 @@ function ModalCobrar({ servicio, onConfirmar, onCerrar }: {
             {lavadistas.length > 0 && (
               <p className="text-xs text-gray-400 mt-1">Lavado: {lavadistas.join(", ")}</p>
             )}
-            {servicio.opInterior && (
-              <p className="text-xs text-gray-400">Interior: {servicio.opInterior.user.name}</p>
+            {interioristas.length > 0 && (
+              <p className="text-xs text-gray-400">Interior: {interioristas.join(", ")}</p>
             )}
           </div>
           <div>
@@ -253,8 +255,9 @@ function ServicioCard({
   }
   const btn = botonSiguiente()
 
-  // Operarios ya asignados al lavado para mostrar en card
-  const lavadistas = [s.opLavado1, s.opLavado2, s.opLavado3]
+  // Operarios ya asignados al lavado (1) e interior (hasta 4)
+  const lavadistas  = [s.opLavado1].filter(Boolean).map((o) => o!.user.name).filter(Boolean)
+  const interioristas = [s.opInterior, s.opInterior2, s.opInterior3, s.opInterior4]
     .filter(Boolean).map((o) => o!.user.name).filter(Boolean)
 
   const estadoEstilo =
@@ -262,8 +265,8 @@ function ServicioCard({
     s.estado === "POR_COBRAR" ? "border-emerald-400 bg-emerald-50/60" :
     "border-blue-300 bg-blue-50/60"
 
-  // Interior solo permite 1 operario
-  const maxOps = s.etapa === "INTERIOR" ? 1 : 3
+  // Lavado: 1 operario · Interior: hasta 4
+  const maxOps = s.etapa === "INTERIOR" ? 4 : 1
 
   return (
     <div className={`rounded-xl border-2 p-3 space-y-2.5 ${estadoEstilo}`}>
@@ -320,10 +323,10 @@ function ServicioCard({
           <span>{lavadistas.join(", ")}</span>
         </div>
       )}
-      {s.opInterior && s.etapa === null && s.estado !== "POR_COBRAR" && (
+      {interioristas.length > 0 && s.etapa === null && s.estado !== "POR_COBRAR" && (
         <div className="flex items-center gap-1.5 text-xs text-gray-500">
-          <User className="w-3 h-3" />
-          <span>Int: {s.opInterior.user.name}</span>
+          <Users className="w-3 h-3" />
+          <span>Int: {interioristas.join(", ")}</span>
         </div>
       )}
 
@@ -568,8 +571,7 @@ export default function ColaServiciosBoard({ userRole }: Props) {
           ) : (
             <div className="divide-y divide-gray-100">
               {historial.map((s) => {
-                const lavadistas = [s.opLavado1, s.opLavado2, s.opLavado3]
-                  .filter(Boolean).map((o) => o!.user.name).filter(Boolean)
+                const lavadistas = [s.opLavado1].filter(Boolean).map((o) => o!.user.name).filter(Boolean)
                 return (
                   <div key={s.id} className="px-4 py-3 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0">
@@ -583,7 +585,8 @@ export default function ColaServiciosBoard({ userRole }: Props) {
                         <p className="text-xs text-gray-500 truncate">
                           {nombreServicios(s)}
                           {lavadistas.length > 0 && ` · Lav: ${lavadistas.join(", ")}`}
-                          {s.opInterior && ` · Int: ${s.opInterior.user.name}`}
+                          {[s.opInterior, s.opInterior2, s.opInterior3, s.opInterior4].filter(Boolean).length > 0 &&
+                    ` · Int: ${[s.opInterior, s.opInterior2, s.opInterior3, s.opInterior4].filter(Boolean).map(o => o!.user.name).join(", ")}`}
                         </p>
                       </div>
                     </div>

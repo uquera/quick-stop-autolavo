@@ -27,11 +27,12 @@ export async function GET(req: NextRequest) {
   const servicios = await prisma.servicio.findMany({
     where: { estado: "COMPLETADO", horaSalida: { gte: inicio } },
     include: {
-      operario:  { include: { user: { select: { name: true } } } },
-      opLavado1: { include: { user: { select: { name: true } } } },
-      opLavado2: { include: { user: { select: { name: true } } } },
-      opLavado3: { include: { user: { select: { name: true } } } },
-      opInterior:{ include: { user: { select: { name: true } } } },
+      operario:   { include: { user: { select: { name: true } } } },
+      opLavado1:  { include: { user: { select: { name: true } } } },
+      opInterior: { include: { user: { select: { name: true } } } },
+      opInterior2:{ include: { user: { select: { name: true } } } },
+      opInterior3:{ include: { user: { select: { name: true } } } },
+      opInterior4:{ include: { user: { select: { name: true } } } },
       items: true,
       tipoServicio: true,
       consumos: true,
@@ -68,10 +69,11 @@ export async function GET(req: NextRequest) {
       if (!porEtapaOp[k]) porEtapaOp[k] = { nombre: k, lavado: 0, interior: 0 }
       porEtapaOp[k][etapa]++
     }
-    addOp(s.opLavado1, "lavado")
-    addOp(s.opLavado2, "lavado")
-    addOp(s.opLavado3, "lavado")
-    addOp(s.opInterior, "interior")
+    addOp(s.opLavado1,  "lavado")
+    addOp(s.opInterior,  "interior")
+    addOp(s.opInterior2, "interior")
+    addOp(s.opInterior3, "interior")
+    addOp(s.opInterior4, "interior")
   }
 
   // ── Servicio más rentable ─────────────────────────────────────────────────
