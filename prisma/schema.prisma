@@ -171,10 +171,13 @@ model Servicio {
   opInterior3Id String?
   opInterior4Id String?
 
-  horaIngreso     DateTime       @default(now())
-  horaInicio      DateTime?
-  horaSalida      DateTime?
-  duracionMinutos Int?
+  horaIngreso          DateTime  @default(now())
+  horaInicio           DateTime?   // inicio Lavado
+  horaInicioInterior   DateTime?   // inicio Interior
+  horaSalida           DateTime?
+  duracionMinutos      Int?
+  duracionLavadoMin    Int?         // minutos en etapa Lavado
+  duracionInteriorMin  Int?         // minutos en etapa Interior
 
   estado        EstadoServicio @default(EN_ESPERA)
   metodoPago    MetodoPago?
@@ -234,6 +237,7 @@ enum MetodoPago {
   TARJETA
   MERCADOPAGO
   BILLETERA
+  NEQUI
 }
 
 // ─── BODEGA / CONSUMIBLES ─────────────────────────────────────────────────────

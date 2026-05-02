@@ -60,17 +60,26 @@ export async function PATCH(
 
     } else if (actual.etapa === "LAVADO") {
       // LAVADO → INTERIOR (hasta 4 operarios)
-      data.etapa        = "INTERIOR"
-      data.opLavado1Id  = opIds[0]
+      data.etapa               = "INTERIOR"
+      data.opLavado1Id         = opIds[0]
+      data.horaInicioInterior  = new Date()
+      // Calcular duración del Lavado
+      if (actual.horaInicio) {
+        data.duracionLavadoMin = Math.round((Date.now() - actual.horaInicio.getTime()) / 60000)
+      }
 
     } else if (actual.etapa === "INTERIOR") {
       // INTERIOR → POR_COBRAR + descontar consumibles (hasta 4 operarios)
-      data.estado       = "POR_COBRAR"
-      data.etapa        = null
+      data.estado        = "POR_COBRAR"
+      data.etapa         = null
       data.opInteriorId  = opIds[0]
       data.opInterior2Id = opIds[1]
       data.opInterior3Id = opIds[2]
       data.opInterior4Id = opIds[3]
+      // Calcular duración del Interior
+      if (actual.horaInicioInterior) {
+        data.duracionInteriorMin = Math.round((Date.now() - actual.horaInicioInterior.getTime()) / 60000)
+      }
       await descontarConsumiblbles(id, actual.tipoServicioId)
     }
 

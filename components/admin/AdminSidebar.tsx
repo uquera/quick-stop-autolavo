@@ -12,6 +12,7 @@ import {
   Package,
   Tag,
   BarChart3,
+  TrendingUp,
   DollarSign,
   Megaphone,
   ClipboardList,
@@ -20,17 +21,18 @@ import {
 } from "lucide-react"
 
 const nav = [
-  { href: "/admin",              label: "Dashboard",        icon: LayoutDashboard },
-  { href: "/admin/servicios",    label: "Línea de Lavado",  icon: Wrench          },
-  { href: "/admin/vehiculos",    label: "Vehículos",        icon: Car             },
-  { href: "/admin/operarios",    label: "Operarios",        icon: Users           },
-  { href: "/admin/bodega",       label: "Bodega",           icon: Package         },
-  { href: "/admin/tipos-servicio", label: "Tipos de Servicio", icon: Tag          },
-  { href: "/admin/reportes",     label: "Reportes",         icon: BarChart3       },
-  { href: "/admin/caja",         label: "Cierre de Caja",   icon: DollarSign      },
-  { href: "/admin/promociones",  label: "Promociones",      icon: Megaphone       },
-  { href: "/admin/auditoria",    label: "Auditoría",        icon: ClipboardList   },
-  { href: "/admin/licencia",     label: "Licencia",         icon: Shield          },
+  { href: "/admin",                label: "Dashboard",        icon: LayoutDashboard },
+  { href: "/admin/servicios",      label: "Línea de Lavado",  icon: Wrench          },
+  { href: "/admin/vehiculos",      label: "Vehículos",        icon: Car             },
+  { href: "/admin/operarios",      label: "Operarios",        icon: Users           },
+  { href: "/admin/bodega",         label: "Bodega",           icon: Package         },
+  { href: "/admin/tipos-servicio", label: "Tipos de Servicio",icon: Tag             },
+  { href: "/admin/metricas",       label: "Rentabilidad",     icon: TrendingUp      },
+  { href: "/admin/reportes",       label: "Reportes",         icon: BarChart3       },
+  { href: "/admin/caja",           label: "Cierre de Caja",   icon: DollarSign      },
+  { href: "/admin/promociones",    label: "Promociones",      icon: Megaphone       },
+  { href: "/admin/auditoria",      label: "Auditoría",        icon: ClipboardList   },
+  { href: "/admin/licencia",       label: "Licencia",         icon: Shield          },
 ]
 
 interface Props {
